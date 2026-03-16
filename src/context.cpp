@@ -16,8 +16,6 @@
 
 namespace antheos {
 
-static constexpr size_t BID_LEN = 8;
-
 struct Context::Impl {
     std::string oid, did, iid, bid_str;
     SidPool sid_pool;
@@ -45,15 +43,11 @@ struct Context::Impl {
     std::string scratch_body;
     bool scratch_has_body = false;
 
-    Impl(std::string_view o, std::string_view d, std::string_view i)
-        : oid(o), did(d), iid(i),
+    Impl(std::string_view o, std::string_view d, std::string_view i,
+         std::string_view b)
+        : oid(o), did(d), iid(i), bid_str(b),
           sid_pool(MAX_SESSIONS, o, d, i)
     {
-        auto b = id::bid_generate(BID_LEN);
-        if (!b)
-            throw std::runtime_error("Context: BID generation failed");
-        bid_str = std::move(*b);
-
         parser.on_word([this](wire::WordType type, wire::Radix radix,
                               wire::Unit unit,
                               const uint8_t* body, size_t len) {
@@ -192,11 +186,11 @@ struct Context::Impl {
 /* ── Lifecycle ── */
 
 Context::Context(std::string_view oid, std::string_view did,
-                 std::string_view iid) {
-    if (oid.empty() || did.empty() || iid.empty())
+                 std::string_view iid, std::string_view bid) {
+    if (oid.empty() || did.empty() || iid.empty() || bid.empty())
         throw std::invalid_argument(
-            "Context: OID, DID, IID must be non-empty");
-    impl_ = std::make_unique<Impl>(oid, did, iid);
+            "Context: OID, DID, IID, BID must be non-empty");
+    impl_ = std::make_unique<Impl>(oid, did, iid, bid);
 }
 
 Context::~Context() = default;

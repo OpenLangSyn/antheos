@@ -10,13 +10,11 @@ No C11 layer underneath.
 
 ## Location
 
-- Source: `~/projects/langsyn/base/antheos/`
-- Header: `include/antheos.hpp` (single public header, 375 lines)
+- Header: `include/antheos.hpp` (single public header)
 - Implementation: `src/` (5 files)
-- Tests: `tests/` (9 suites + test_common.hpp, 201 tests)
-- Spec (canon): `base/antheos/docs/ANTHEOS_PROTOCOL_SPEC.md`
+- Tests: `tests/` (9 suites + test_common.hpp, 205 tests)
+- Spec (canon): `docs/ANTHEOS_PROTOCOL_SPEC.md`
 - Compiled: `libantheos.a` (static library)
-- Latest commit: `c5ff46c`
 
 ## Current State
 
@@ -72,7 +70,7 @@ Word: `[SOW] [WT] [SOR RF]? [SOU UF]? [SOB] Body [EOW]`
 
 ```bash
 make              # Build libantheos.a
-make test         # Run all 201 tests
+make test         # Run all 205 tests
 make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 # Flags: -std=c++17 -Wall -Wextra -Werror -O2 -fPIC
 ```
@@ -81,14 +79,14 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 
 | Suite | Tests | Purpose |
 |-------|-------|---------|
-| test_context | 43 | High-level API lifecycle, sessions, feed+callbacks |
+| test_context | 44 | High-level API lifecycle, sessions, feed+callbacks |
 | test_conformance | 35 | Every wire example from v9 spec verified byte-for-byte |
 | test_edge | 36 | Boundary conditions, C++ API semantics |
 | test_wire | 24 | Encoding/decoding round-trips |
 | test_bus | 18 | All 10 bus verb frame builders |
 | test_session | 14 | K/T/N/L/U/F session verbs, MID wrap |
 | test_parser | 12 | Stream parser state machine |
-| test_identity | 12 | Base-32, BID/SID generation, pool |
+| test_identity | 15 | Base-32, BID/SID generation, pool |
 | test_service | 7 | Q/O/A service verbs |
 
 ## Interfaces
@@ -107,7 +105,9 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 | Memory | RAII (pimpl, vector, string) |
 | Buffer model | Frame value type (heap-backed) |
 | Build output | libantheos.a (static) |
-| Tests | 201 across 9 suites |
+| Platform deps | None — pure C++17 standard library only |
+| Entropy | Caller-provided (`bid_generate` takes raw bytes) |
+| Tests | 205 across 9 suites |
 
 ## Known Issues
 

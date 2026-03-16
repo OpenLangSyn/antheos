@@ -12,8 +12,6 @@
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
-#include <fcntl.h>
-#include <unistd.h>
 
 namespace antheos {
 
@@ -66,23 +64,16 @@ std::optional<std::string> base32_encode(const uint8_t* data, size_t data_len) {
     return out;
 }
 
-std::optional<std::string> bid_generate(size_t len) {
+std::optional<std::string> bid_generate(size_t len,
+    const uint8_t* entropy, size_t entropy_len) {
     if (len < BID_MIN_LEN || len > BID_MAX_LEN)
         return std::nullopt;
 
-    size_t nbytes = (len * 5 + 7) / 8;
-    uint8_t buf[((BID_MAX_LEN * 5 + 7) / 8)];
-
-    int fd = open("/dev/urandom", O_RDONLY);
-    if (fd < 0) return std::nullopt;
-
-    ssize_t r = read(fd, buf, nbytes);
-    close(fd);
-
-    if (r < 0 || static_cast<size_t>(r) != nbytes)
+    size_t nbytes = bid_entropy_needed(len);
+    if (entropy == nullptr || entropy_len < nbytes)
         return std::nullopt;
 
-    auto encoded = base32_encode(buf, nbytes);
+    auto encoded = base32_encode(entropy, nbytes);
     if (!encoded) return std::nullopt;
 
     return encoded->substr(0, len);

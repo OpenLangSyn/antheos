@@ -188,14 +188,14 @@ static void wire_offer_cb(Context& ctx, CbState& state)
 /* 1. Init success */
 static void test_init_success(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     ASSERT_TRUE(!ctx.bid().empty());
 }
 
 /* 2. Init generates BID — establish frame contains radix U BID */
 static void test_init_generates_bid(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.establish();
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -206,7 +206,7 @@ static void test_init_generates_bid(void)
 static void test_init_empty_oid(void)
 {
     bool threw = false;
-    try { Context ctx("", "Oracle", "SN001"); }
+    try { Context ctx("", "Oracle", "SN001", "ABCDEFGH"); }
     catch (const std::invalid_argument&) { threw = true; }
     ASSERT_TRUE(threw);
 }
@@ -215,7 +215,7 @@ static void test_init_empty_oid(void)
 static void test_init_empty_did(void)
 {
     bool threw = false;
-    try { Context ctx("VERUS", "", "SN001"); }
+    try { Context ctx("VERUS", "", "SN001", "ABCDEFGH"); }
     catch (const std::invalid_argument&) { threw = true; }
     ASSERT_TRUE(threw);
 }
@@ -224,15 +224,24 @@ static void test_init_empty_did(void)
 static void test_init_empty_iid(void)
 {
     bool threw = false;
-    try { Context ctx("VERUS", "Oracle", ""); }
+    try { Context ctx("VERUS", "Oracle", "", "ABCDEFGH"); }
     catch (const std::invalid_argument&) { threw = true; }
     ASSERT_TRUE(threw);
 }
 
-/* 6. Destroy with active sessions — no crash */
+/* 6. Init empty BID — throws */
+static void test_init_empty_bid(void)
+{
+    bool threw = false;
+    try { Context ctx("VERUS", "Oracle", "SN001", ""); }
+    catch (const std::invalid_argument&) { threw = true; }
+    ASSERT_TRUE(threw);
+}
+
+/* 7. Destroy with active sessions — no crash */
 static void test_destroy_with_sessions(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int s0 = ctx.session_open();
     int s1 = ctx.session_open();
     ASSERT_TRUE(s0 >= 0);
@@ -243,7 +252,7 @@ static void test_destroy_with_sessions(void)
 /* 7. Destroy valid — no crash */
 static void test_destroy_valid(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     ASSERT_TRUE(!ctx.bid().empty());
     /* scope exit — no crash */
 }
@@ -255,7 +264,7 @@ static void test_destroy_valid(void)
 /* 8. Establish — verb E, our BID */
 static void test_establish(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.establish();
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -266,7 +275,7 @@ static void test_establish(void)
 /* 9. Broadcast — verb B, TEXT word */
 static void test_broadcast(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.broadcast("hello world");
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -277,7 +286,7 @@ static void test_broadcast(void)
 /* 10. Ping specific — verb P, target BID */
 static void test_ping_specific(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.ping("4T9X2");
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -288,7 +297,7 @@ static void test_ping_specific(void)
 /* 11. Ping broadcast — verb P, no ID word */
 static void test_ping_broadcast(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.ping();
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -299,7 +308,7 @@ static void test_ping_broadcast(void)
 /* 12. Exception — verb X, TEXT reason */
 static void test_exception(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.exception("overload");
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -310,7 +319,7 @@ static void test_exception(void)
 /* 13. Verify request — verb V, target BID */
 static void test_verify_request(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.verify("4T9X2");
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -321,7 +330,7 @@ static void test_verify_request(void)
 /* 14. Verify response — verb V, OID/DID/IID as plain ASCII IDs */
 static void test_verify_response(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.verify_response();
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -334,7 +343,7 @@ static void test_verify_response(void)
 /* 15. Discover — verb D, target BID */
 static void test_discover(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.discover("4T9X2");
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -345,7 +354,7 @@ static void test_discover(void)
 /* 16. Acknowledge — verb W, target BID */
 static void test_acknowledge(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.acknowledge("4T9X2");
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -356,7 +365,7 @@ static void test_acknowledge(void)
 /* 17. BID is valid base-32, length 8 */
 static void test_bid_is_base32(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto bid = ctx.bid();
     ASSERT_TRUE(!bid.empty());
     ASSERT_EQ(static_cast<int>(bid.size()), 8);
@@ -373,7 +382,7 @@ static void test_bid_is_base32(void)
 /* 18. Query — verb Q, TEXT capability */
 static void test_query(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.query("thermometer");
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -384,7 +393,7 @@ static void test_query(void)
 /* 19. Offer — verb O, our BID, TEXT description */
 static void test_offer(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.offer("temp_sensor");
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -396,7 +405,7 @@ static void test_offer(void)
 /* 20. Accept — verb A, target BID */
 static void test_accept(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     auto f = ctx.accept("4T9X2");
     ASSERT_TRUE(f.has_value());
     ASSERT_TRUE(frame_valid(*f));
@@ -411,7 +420,7 @@ static void test_accept(void)
 /* 21. Session open — returns slot >= 0 */
 static void test_session_open(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot = ctx.session_open();
     ASSERT_TRUE(slot >= 0);
 }
@@ -419,7 +428,7 @@ static void test_session_open(void)
 /* 22. Session SID — non-empty */
 static void test_session_sid(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot = ctx.session_open();
     ASSERT_TRUE(slot >= 0);
     auto sid = ctx.session_sid(slot);
@@ -429,7 +438,7 @@ static void test_session_sid(void)
 /* 23. Session initial MID — returns 1 */
 static void test_session_initial_mid(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot = ctx.session_open();
     ASSERT_TRUE(slot >= 0);
     ASSERT_EQ(ctx.session_mid(slot), 1);
@@ -438,7 +447,7 @@ static void test_session_initial_mid(void)
 /* 24. Session initial state — Active */
 static void test_session_initial_state(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot = ctx.session_open();
     ASSERT_TRUE(slot >= 0);
     ASSERT_TRUE(ctx.session_state(slot) == SessionState::Active);
@@ -447,7 +456,7 @@ static void test_session_initial_state(void)
 /* 25. Session call — verb K, SID radix U, MID=1, TEXT payload */
 static void test_session_call_frame(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot = ctx.session_open();
     ASSERT_TRUE(slot >= 0);
     auto sid = ctx.session_sid(slot);
@@ -464,7 +473,7 @@ static void test_session_call_frame(void)
 /* 26. Session call MID increment — 2nd=2, 3rd=3 */
 static void test_session_call_mid_increment(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot = ctx.session_open();
     ASSERT_TRUE(slot >= 0);
 
@@ -484,7 +493,7 @@ static void test_session_call_mid_increment(void)
 /* 27. Session notify — verb N, SID, MID, TEXT. MID increments */
 static void test_session_notify_frame(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot = ctx.session_open();
     ASSERT_TRUE(slot >= 0);
     auto sid = ctx.session_sid(slot);
@@ -503,7 +512,7 @@ static void test_session_notify_frame(void)
 /* 28. Session status — verb T, SID, MID. MID increments */
 static void test_session_status_frame(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot = ctx.session_open();
     ASSERT_TRUE(slot >= 0);
     auto sid = ctx.session_sid(slot);
@@ -521,7 +530,7 @@ static void test_session_status_frame(void)
 /* 29. Session close — verb F, SID. State goes Idle */
 static void test_session_close_frame(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot = ctx.session_open();
     ASSERT_TRUE(slot >= 0);
 
@@ -539,7 +548,7 @@ static void test_session_close_frame(void)
 /* 30. Session close releases SID — new open succeeds after close */
 static void test_session_close_releases_sid(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int slot1 = ctx.session_open();
     ASSERT_TRUE(slot1 >= 0);
 
@@ -552,7 +561,7 @@ static void test_session_close_releases_sid(void)
 /* 31. Session invalid slot — returns nullopt */
 static void test_session_invalid_slot(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     ASSERT_TRUE(!ctx.session_call(-1, {}, "x").has_value());
     ASSERT_TRUE(!ctx.session_call(32, {}, "x").has_value());
 }
@@ -560,14 +569,14 @@ static void test_session_invalid_slot(void)
 /* 32. Session closed slot — call on never-opened slot returns nullopt */
 static void test_session_closed_slot(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     ASSERT_TRUE(!ctx.session_call(0, {}, "x").has_value());
 }
 
 /* 33. Multiple sessions — 3 sessions, each gets a unique SID */
 static void test_multiple_sessions(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     int s0 = ctx.session_open();
     int s1 = ctx.session_open();
     int s2 = ctx.session_open();
@@ -591,7 +600,7 @@ static void test_multiple_sessions(void)
 /* 34. Feed broadcast — event_cb fires with verb "B" */
 static void test_feed_broadcast(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     CbState state;
     wire_event_cb(ctx, state);
 
@@ -607,7 +616,7 @@ static void test_feed_broadcast(void)
 /* 35. Feed session call — msg_cb fires with correct SID, MID, payload */
 static void test_feed_session_call(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     CbState state;
     wire_msg_cb(ctx, state);
 
@@ -626,7 +635,7 @@ static void test_feed_session_call(void)
 /* 36. Feed service offer — offer_cb fires with correct BID and description */
 static void test_feed_service_offer(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     CbState state;
     wire_offer_cb(ctx, state);
 
@@ -643,7 +652,7 @@ static void test_feed_service_offer(void)
 /* 37. Feed two messages — callbacks fire twice */
 static void test_feed_two_messages(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     CbState state;
     wire_event_cb(ctx, state);
 
@@ -660,7 +669,7 @@ static void test_feed_two_messages(void)
 /* 38. Feed partial — one byte at a time, callback only after complete frame */
 static void test_feed_partial(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     CbState state;
     wire_event_cb(ctx, state);
 
@@ -681,7 +690,7 @@ static void test_feed_partial(void)
 /* 39. No callback registered — feed valid frame, no crash */
 static void test_feed_no_callback(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
 
     auto f = bus::broadcast("test");
     ASSERT_TRUE(f.has_value());
@@ -693,7 +702,7 @@ static void test_feed_no_callback(void)
 /* 40. Feed large session call — payload >256 bytes parses correctly */
 static void test_feed_large_payload(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     CbState state;
     wire_msg_cb(ctx, state);
 
@@ -720,7 +729,7 @@ static void test_feed_large_payload(void)
 /* 41. Accept with sender BID — event_cb receives id2 */
 static void test_feed_accept_with_sender(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     CbState state;
     wire_event_cb(ctx, state);
 
@@ -742,7 +751,7 @@ static void test_feed_accept_with_sender(void)
 /* 42. Accept without sender BID — event_cb receives empty id2 */
 static void test_feed_accept_no_sender(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     CbState state;
     wire_event_cb(ctx, state);
 
@@ -767,7 +776,7 @@ static void test_feed_accept_no_sender(void)
 /* 43. K-frame with target BID — msg_cb receives target_bid */
 static void test_feed_session_call_target_bid(void)
 {
-    Context ctx("VERUS", "Oracle", "SN001");
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
     CbState state;
     wire_msg_cb(ctx, state);
 
@@ -798,6 +807,7 @@ void test_context_run(int& out_run, int& out_passed)
     TEST(test_init_empty_oid);
     TEST(test_init_empty_did);
     TEST(test_init_empty_iid);
+    TEST(test_init_empty_bid);
     TEST(test_destroy_with_sessions);
     TEST(test_destroy_valid);
 

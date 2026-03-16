@@ -172,8 +172,11 @@ inline constexpr size_t SID_MIN_LEN = 4;
 inline constexpr size_t SID_MAX_LEN = 16;
 inline constexpr size_t SID_POOL_MAX = 1024;
 
+constexpr size_t bid_entropy_needed(size_t len) { return (len * 5 + 7) / 8; }
+
 std::optional<std::string> base32_encode(const uint8_t* data, size_t len);
-std::optional<std::string> bid_generate(size_t len);
+std::optional<std::string> bid_generate(size_t len,
+    const uint8_t* entropy, size_t entropy_len);
 std::optional<std::string> sid_generate(
     std::string_view oid, std::string_view did,
     std::string_view iid, uint32_t counter, size_t len);
@@ -324,7 +327,8 @@ public:
         std::string_view verb, std::string_view id,
         std::string_view id2, std::string_view detail)>;
 
-    Context(std::string_view oid, std::string_view did, std::string_view iid);
+    Context(std::string_view oid, std::string_view did,
+            std::string_view iid, std::string_view bid);
     ~Context();
 
     Context(const Context&) = delete;
