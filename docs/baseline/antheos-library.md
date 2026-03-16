@@ -12,7 +12,7 @@ No C11 layer underneath.
 
 - Header: `include/antheos.hpp` (single public header)
 - Implementation: `src/` (5 files)
-- Tests: `tests/` (9 suites + test_common.hpp, 205 tests)
+- Tests: `tests/` (10 suites + test_common.hpp, 268 tests)
 - Spec (canon): `docs/ANTHEOS_PROTOCOL_SPEC.md`
 - Compiled: `libantheos.a` (static library)
 
@@ -70,7 +70,7 @@ Word: `[SOW] [WT] [SOR RF]? [SOU UF]? [SOB] Body [EOW]`
 
 ```bash
 make              # Build libantheos.a
-make test         # Run all 205 tests
+make test         # Run all 268 tests
 make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 # Flags: -std=c++17 -Wall -Wextra -Werror -O2 -fPIC
 ```
@@ -88,6 +88,7 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 | test_parser | 12 | Stream parser state machine |
 | test_identity | 15 | Base-32, BID/SID generation, pool |
 | test_service | 7 | Q/O/A service verbs |
+| test_depth | 63 | Frame class, tail handling, move semantics, session_accept, dispatch, decode edge cases |
 
 ## Interfaces
 
@@ -107,7 +108,7 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 | Build output | libantheos.a (static) |
 | Platform deps | None — pure C++17 standard library only |
 | Entropy | Caller-provided (`bid_generate` takes raw bytes) |
-| Tests | 205 across 9 suites |
+| Tests | 268 across 10 suites |
 
 ## Known Issues
 

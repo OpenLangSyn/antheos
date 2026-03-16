@@ -11,7 +11,7 @@ pure C++17 standard library only. No POSIX, no platform-specific code.
 ## Build
 ```bash
 make              # Build libantheos.a
-make test         # Build and run all test suites (205 tests)
+make test         # Build and run all test suites (268 tests)
 make install      # Install library + header to /usr/local (sudo)
 make uninstall    # Remove installed files (sudo)
 make clean        # Remove build artifacts
@@ -20,7 +20,7 @@ make clean        # Remove build artifacts
 ## Directory structure
 - `include/antheos.hpp` — Single public header
 - `src/` — Implementation (5 files)
-- `tests/` — Test suites (9 files + test_common.hpp, 205 tests)
+- `tests/` — Test suites (10 files + test_common.hpp, 268 tests)
 - `docs/` — Baseline, changes, recovery
 
 ## Architecture
@@ -72,9 +72,10 @@ Classes:
 | test_conformance.cpp | 35 | Every wire example from v9 spec verified byte-for-byte |
 | test_edge.cpp | 36 | Boundary conditions, C++ API semantics |
 | test_context.cpp | 44 | High-level API: lifecycle, sessions, feed+callbacks |
+| test_depth.cpp | 63 | Frame class, tail handling, move semantics, session_accept, dispatch, decode edge cases |
 
 ## Rules for modifications
-- Run `make clean && make test` before every commit — all 205 tests must pass
+- Run `make clean && make test` before every commit — all 268 tests must pass
 - Wire format changes require updating test_conformance.cpp to match
 - No commented-out code, no bare TODOs, no debug prints
 - Library is transport-agnostic: no sockets, no file I/O, no threads

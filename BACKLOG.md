@@ -7,8 +7,8 @@
 
 ## Recovery
 
-**Last session:** 2026-03-16 — AC-08 standalone purity (commit 240a1e9).
-**Next picks:** None active. Library is feature-complete (205/205 tests).
+**Last session:** 2026-03-16 — AC-09 purity audit + depth tests (205→268).
+**Next picks:** None active. Library is feature-complete (268/268 tests).
 
 ---
 
@@ -22,6 +22,7 @@ None.
 
 | ID | What | When |
 |----|------|------|
+| AC-09 | Purity audit + depth test suite — 205→268 tests | 2026-03-16 |
 | AC-08 | Standalone purity: caller-provided entropy, remove POSIX deps | 2026-03-16 |
 | AC-07 | Swap antheos-cpp → antheos (directory consolidation) | 2026-03-16 |
 | AC-06 | Phase 6: Context — stateful codec (43 tests) | 2026-03-16 |

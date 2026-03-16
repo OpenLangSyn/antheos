@@ -38,8 +38,9 @@ TEST_SESSION     = $(BUILDDIR)/test_session
 TEST_CONFORMANCE = $(BUILDDIR)/test_conformance
 TEST_EDGE        = $(BUILDDIR)/test_edge
 TEST_CONTEXT     = $(BUILDDIR)/test_context
+TEST_DEPTH       = $(BUILDDIR)/test_depth
 
-TESTS = $(TEST_WIRE) $(TEST_PARSER) $(TEST_IDENTITY) $(TEST_BUS) $(TEST_SERVICE) $(TEST_SESSION) $(TEST_CONFORMANCE) $(TEST_EDGE) $(TEST_CONTEXT)
+TESTS = $(TEST_WIRE) $(TEST_PARSER) $(TEST_IDENTITY) $(TEST_BUS) $(TEST_SERVICE) $(TEST_SESSION) $(TEST_CONFORMANCE) $(TEST_EDGE) $(TEST_CONTEXT) $(TEST_DEPTH)
 
 # ── Targets ──
 
@@ -85,6 +86,9 @@ $(TEST_EDGE): $(TESTDIR)/test_edge.cpp $(LIB) | $(BUILDDIR)
 $(TEST_CONTEXT): $(TESTDIR)/test_context.cpp $(LIB) | $(BUILDDIR)
 	$(CXX) $(CXXFLAGS) -I$(TESTDIR) -DTEST_MAIN_FN=test_context_run -o $@ $< -L$(BUILDDIR) -lantheos
 
+$(TEST_DEPTH): $(TESTDIR)/test_depth.cpp $(LIB) | $(BUILDDIR)
+	$(CXX) $(CXXFLAGS) -I$(TESTDIR) -DTEST_MAIN_FN=test_depth_run -o $@ $< -L$(BUILDDIR) -lantheos
+
 # ── Test runner ──
 
 test: $(TESTS)
@@ -116,6 +120,9 @@ test_edge: $(TEST_EDGE)
 
 test_context: $(TEST_CONTEXT)
 	./$(TEST_CONTEXT)
+
+test_depth: $(TEST_DEPTH)
+	./$(TEST_DEPTH)
 
 # ── Install / Uninstall ──
 
