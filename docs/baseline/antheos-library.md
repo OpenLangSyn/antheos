@@ -1,6 +1,6 @@
 # libantheos C++17
 
-Updated: 2026-03-16
+Updated: 2026-03-17
 
 ## What It Is
 
@@ -14,7 +14,7 @@ No C11 layer underneath.
 - Implementation: `src/` (5 files)
 - Tests: `tests/` (10 suites + test_common.hpp, 268 tests)
 - Spec (canon): `docs/ANTHEOS_PROTOCOL_SPEC.md`
-- Compiled: `libantheos.a` (static library)
+- Compiled: `libantheos.a` (static), `libantheos.so` (shared)
 
 ## Current State
 

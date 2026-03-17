@@ -26,6 +26,7 @@ TESTDIR  = tests
 SRCS = $(wildcard $(SRCDIR)/*.cpp)
 OBJS = $(patsubst $(SRCDIR)/%.cpp,$(BUILDDIR)/%.o,$(SRCS))
 LIB  = $(BUILDDIR)/libantheos.a
+SO   = $(BUILDDIR)/libantheos.so
 
 # ── Test binaries ──
 
@@ -46,7 +47,7 @@ TESTS = $(TEST_WIRE) $(TEST_PARSER) $(TEST_IDENTITY) $(TEST_BUS) $(TEST_SERVICE)
 
 .PHONY: all clean test install uninstall help
 
-all: $(LIB)
+all: $(LIB) $(SO)
 
 $(BUILDDIR):
 	mkdir -p $(BUILDDIR)
@@ -56,6 +57,9 @@ $(BUILDDIR)/%.o: $(SRCDIR)/%.cpp include/antheos.hpp | $(BUILDDIR)
 
 $(LIB): $(OBJS)
 	ar $(ARFLAGS) $@ $^
+
+$(SO): $(OBJS)
+	$(CXX) -shared -o $@ $^
 
 # ── Test build rules ──
 
@@ -126,17 +130,20 @@ test_depth: $(TEST_DEPTH)
 
 # ── Install / Uninstall ──
 
-install: $(LIB)
+install: $(LIB) $(SO)
 	install -d $(LIBDIR)
 	install -m 644 $(LIB) $(LIBDIR)/libantheos.a
+	install -m 755 $(SO) $(LIBDIR)/libantheos.so
 	install -d $(INCDIR)
 	install -m 644 include/antheos.hpp $(INCDIR)/
-	@echo "libantheos installed to $(LIBDIR)/libantheos.a"
+	ldconfig
+	@echo "libantheos installed to $(LIBDIR)/"
 	@echo "Header installed to $(INCDIR)/"
 
 uninstall:
-	rm -f $(LIBDIR)/libantheos.a
+	rm -f $(LIBDIR)/libantheos.a $(LIBDIR)/libantheos.so
 	rm -rf $(INCDIR)
+	ldconfig
 	@echo "libantheos uninstalled"
 
 # ── Clean ──
