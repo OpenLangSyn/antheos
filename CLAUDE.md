@@ -47,7 +47,7 @@ Classes:
 | wire.cpp | Control chars, word types, encode/decode, validation |
 | parser.cpp | 11-state byte-at-a-time stream parser |
 | identity.cpp | FNV-1a, base-32, BID/SID generation, SidPool |
-| bus.cpp | All 19 verb frame builders (bus + service + session) |
+| bus.cpp | All 26 frame builders: 14 bus + 3 service + 9 session (19 protocol verbs + convenience variants) |
 | context.cpp | High-level stateful API: identity, sessions, feed, dispatch |
 
 ## Coding standards
@@ -66,7 +66,7 @@ Classes:
 | test_wire.cpp | 24 | Wire encoding constants, encode/decode round-trips |
 | test_parser.cpp | 12 | Stream parser state machine, recovery from malformed input |
 | test_identity.cpp | 15 | Base-32 encoding, BID/SID generation, entropy, SID pool |
-| test_bus.cpp | 18 | All 10 bus verb frame builders, wire format verification |
+| test_bus.cpp | 18 | All 14 bus frame builders (10 protocol verbs + convenience variants), wire format |
 | test_service.cpp | 7 | Q/O/A service verb frame builders |
 | test_session.cpp | 14 | K/T/N/L/U/F session verb builders, MID wrap |
 | test_conformance.cpp | 35 | Every wire example from v9 spec verified byte-for-byte |

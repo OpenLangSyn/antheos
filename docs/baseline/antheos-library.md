@@ -25,7 +25,7 @@ No C11 layer underneath.
 | wire.cpp | ~150 | Control chars, word types, validation, encode/decode |
 | parser.cpp | ~260 | 11-state byte-at-a-time stream parser |
 | identity.cpp | ~265 | FNV-1a, base-32, BID/SID generation, SidPool |
-| bus.cpp | ~390 | All 19 verb frame builders (bus + service + session) |
+| bus.cpp | ~390 | All 26 frame builders: 14 bus + 3 service + 9 session (19 protocol verbs + convenience variants) |
 | context.cpp | ~310 | High-level stateful API: identity, sessions, feed, dispatch |
 
 ### Protocol Verbs (19 total)
@@ -83,7 +83,7 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 | test_conformance | 35 | Every wire example from v9 spec verified byte-for-byte |
 | test_edge | 36 | Boundary conditions, C++ API semantics |
 | test_wire | 24 | Encoding/decoding round-trips |
-| test_bus | 18 | All 10 bus verb frame builders |
+| test_bus | 18 | All 14 bus frame builders (10 protocol verbs + convenience variants) |
 | test_session | 14 | K/T/N/L/U/F session verbs, MID wrap |
 | test_parser | 12 | Stream parser state machine |
 | test_identity | 15 | Base-32, BID/SID generation, pool |
