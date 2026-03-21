@@ -86,7 +86,7 @@ Antheos uses a layered identity model. Each identifier type has a defined scope,
 | DID    | Device    | Origin     | ASCII      | Origin-defined (hardwired type identifier)|
 | IID    | Instance  | Origin     | ASCII      | Origin-defined (hardwired serial)         |
 | BID    | Bus       | Bus        | Base-32    | Ephemeral (established at bus connection) |
-| SID    | Session   | Instance   | Base-32    | Session duration (recycled from pool)     |
+| SID    | Session   | Instance   | Base-32    | Session duration (fresh per session)      |
 | MID    | Message   | Session    | Decimal    | Message duration (sequential counter)     |
 
 ## 5.1 OID (Origin Identifier)
@@ -107,7 +107,7 @@ The BID is a base-32 address negotiated at bus connection through the Establish/
 
 ## 5.5 SID (Session Identifier)
 
-The SID identifies a session between instances. It is a base-32 hash of OID:DID:IID:\<counter\>. SIDs are maintained in a recycling pool — when a session ends, its SID is returned to the pool. New sessions reuse the oldest SID from the pool; if the pool is empty, a counter is incremented and a new hash generated. The counter resets on device reboot. Carried in an ID word with radix flag U (duotrigesimal).
+The SID identifies a session between instances. It is a base-32 hash of OID:DID:IID:\<counter\>. Every new session receives a fresh SID — SIDs are never reused. A monotonic counter ensures each SID is unique; the counter resets on device reboot. Carried in an ID word with radix flag U (duotrigesimal).
 
 ## 5.6 MID (Message Identifier)
 
@@ -785,7 +785,7 @@ Sessions provide persistent, stateful communication between instances. They are 
 
 ### 11.1.1 Creation
 
-A session is typically initiated after a service Accept, but may be opened directly between instances that already know each other. The initiating instance generates a SID from its recycling pool (or creates a new one from a hash of OID:DID:IID:\<counter\>) and sends the first session-scope message.
+A session is typically initiated after a service Accept, but may be opened directly between instances that already know each other. The initiating instance generates a fresh SID from a hash of OID:DID:IID:\<counter\> and sends the first session-scope message.
 
 ### 11.1.2 Active Communication
 
@@ -799,7 +799,7 @@ If a session is interrupted (bus disconnect, device reset), the Locate verb find
 
 ### 11.1.4 Termination
 
-Finish closes a session. The SID is returned to the recycling pool for reuse.
+Finish closes a session. The SID is discarded — it is never reused.
 
 ### 11.1.5 State Machine
 
@@ -809,30 +809,26 @@ Finish closes a session. The SID is returned to the recycling pool for reuse.
 | ACTIVE     | Session created, SID assigned| SUSPENDED (on disconnect) / IDLE (on Finish)          |
 | SUSPENDED  | Bus lost or timeout          | ACTIVE (on Resume) / IDLE (on Finish or timeout expiry)|
 
-**Session Timeout:** The duration before a SUSPENDED session transitions to IDLE is implementation-defined. An instance that reclaims a SID from a timed-out session MUST respond with `!X SESSION_EXPIRED` if a Resume (`!U`) arrives for that SID afterward. An instance MAY signal an impending timeout via `!T` (Status) before reclaiming the SID.
+**Session Timeout:** The duration before a SUSPENDED session transitions to IDLE is implementation-defined. An instance whose session has timed out MUST respond with `!X SESSION_EXPIRED` if a Resume (`!U`) arrives for that SID afterward. An instance MAY signal an impending timeout via `!T` (Status) before transitioning.
 
-## 11.2 SID Generation and Recycling
+## 11.2 SID Generation
 
-SIDs are variable-length base-32 hashes derived from the instance's identity and a monotonic counter. SID length starts short and grows on collision, keeping typical messages compact while scaling to high session counts.
+SIDs are variable-length base-32 hashes derived from the instance's identity and a monotonic counter. Every session receives a fresh SID — SIDs are never reused. SID length starts short and grows on collision, keeping typical messages compact while scaling to high session counts.
 
 **SID Length:** An implementation defines initial length, increment on collision, and maximum length. SID generation starts at the initial length and grows on collision until a unique SID is found or maximum length is reached.
 
 **Generation Procedure:**
 
-1. Compute hash of OID:DID:IID:\<sid_counter\>.
+1. Compute hash of OID:DID:IID:\<sid_counter\>. Store hash bytes in little-endian order (least significant byte first) so that truncation preserves the most-varying bits.
 2. Encode as base-32, truncated to current SID length (starting at initial length).
 3. Check if truncated SID matches any currently active session.
 4. If collision: increase length by increment, re-truncate, and repeat from step 3.
 5. If length exceeds maximum: increment sid_counter, reset length to initial, and repeat from step 1.
 6. If no collision: SID is assigned, increment sid_counter.
 
-**Recycling:**
+**Rotation:**
 
-When a session finishes, its SID is returned to a recycling pool. New sessions draw from the pool (oldest first) before generating fresh SIDs. The counter resets on device reboot.
-
-Before issuing a SID from the recycling pool, the instance MUST verify the candidate SID does not match any currently active session. If it does, that entry is skipped. If no clean SID is available in the pool, a fresh SID is generated using the procedure above.
-
-A SID returned to the pool MUST be held for a grace period before becoming eligible for reuse, ensuring in-flight Resume messages for the old session have expired before the SID is reassigned.
+SIDs are generated fresh for every session. When a session finishes, its SID is discarded. The monotonic counter ensures forward progress — no SID is ever reissued. The counter resets on device reboot.
 
 If a Resume (`!U`) arrives for a SID that is currently active but belongs to a different session than the sender expects, the receiving instance MUST respond with `!X RESUME_DENIED`.
 
@@ -936,13 +932,13 @@ Wire:    ☻↕!→X►↕"→SESSION_EXPIRED►♥
 
 ## 11.8 Finish
 
-Finish closes a session. The sender immediately transitions the session to IDLE and returns the SID to the recycling pool. Finish is fire-and-forget — no response is expected. If the remote instance does not receive the Finish, its session timeout will eventually reclaim the session.
+Finish closes a session. The sender immediately transitions the session to IDLE and discards the SID. Finish is fire-and-forget — no response is expected. If the remote instance does not receive the Finish, its session timeout will eventually reclaim the session.
 
 ```
 Pseudo:  [SOM] [SOW]!F[EOW] [SOW]@[SOR]U[SOB]A7K2M[EOW] [EOM]
 Wire:    ☻↕!→F►↕@♦U→A7K2M►♥
 ```
-*Finish session A7K2M. SID returned to pool.*
+*Finish session A7K2M. SID discarded.*
 
 ---
 
@@ -1023,7 +1019,7 @@ Antheos Level 1 provides no encryption, authentication, or integrity protection.
 
 Applications requiring security implement encryption and authentication as a higher-level service, negotiated through Query/Offer/Accept. The Antheos frame structure (typed words, delimited boundaries) provides clear attachment points for security wrappers around message content.
 
-The SID hash derivation (from OID:DID:IID:\<counter\>) provides session correlation but not session authentication. Knowledge of a SID allows interaction with the session.
+SIDs are generated fresh per session and never reused, preventing cross-session correlation through SID observation. However, the SID hash derivation (from OID:DID:IID:\<counter\>) is deterministic and not cryptographic — an observer who knows the identity and counter can predict future SIDs. Knowledge of a SID allows interaction with the session.
 
 ---
 

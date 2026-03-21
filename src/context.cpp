@@ -46,7 +46,7 @@ struct Context::Impl {
     Impl(std::string_view o, std::string_view d, std::string_view i,
          std::string_view b)
         : oid(o), did(d), iid(i), bid_str(b),
-          sid_pool(MAX_SESSIONS, o, d, i)
+          sid_pool(o, d, i)
     {
         parser.on_word([this](wire::WordType type, wire::Radix radix,
                               wire::Unit unit,
@@ -386,7 +386,6 @@ std::optional<Frame> Context::session_close(int slot,
 
     auto frame = session::finish(s.sid, target_bid);
 
-    impl_->sid_pool.release(s.sid);
     s.state = SessionState::Idle;
     s.mid = 0;
     s.sid.clear();

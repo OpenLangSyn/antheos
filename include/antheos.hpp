@@ -170,7 +170,6 @@ inline constexpr size_t BID_MIN_LEN = 2;
 inline constexpr size_t BID_MAX_LEN = 16;
 inline constexpr size_t SID_MIN_LEN = 4;
 inline constexpr size_t SID_MAX_LEN = 16;
-inline constexpr size_t SID_POOL_MAX = 1024;
 
 constexpr size_t bid_entropy_needed(size_t len) { return (len * 5 + 7) / 8; }
 
@@ -184,15 +183,18 @@ std::optional<std::string> sid_generate(
 } // namespace id
 
 /* ══════════════════════════════════════════════════════════════════
- *  SidPool — Session ID recycling pool (v9 §11.2)
+ *  SidPool — Session ID generator with length optimization (§11.2)
+ *
+ *  Every session gets a fresh SID. SIDs are never reused.
+ *  Length starts at SID_MIN_LEN and grows only on collision.
  * ══════════════════════════════════════════════════════════════════ */
 
 class SidPool {
 public:
     using CollisionCheck = std::function<bool(std::string_view sid)>;
 
-    SidPool(size_t capacity, std::string_view oid,
-            std::string_view did, std::string_view iid);
+    SidPool(std::string_view oid, std::string_view did,
+            std::string_view iid);
     ~SidPool();
 
     SidPool(const SidPool&) = delete;
@@ -202,8 +204,6 @@ public:
 
     std::optional<std::string> acquire();
     std::optional<std::string> acquire_unique(CollisionCheck check);
-    bool release(std::string_view sid);
-    size_t size() const;
 
 private:
     struct Impl;

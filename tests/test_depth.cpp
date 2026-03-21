@@ -264,22 +264,21 @@ static void test_parser_move_assign() {
  * ================================================================ */
 
 static void test_sidpool_move_construct() {
-    SidPool a(8, "org", "dev", "iid");
+    SidPool a("org", "dev", "iid");
     auto sid = a.acquire();
     ASSERT_TRUE(sid.has_value());
 
     SidPool b = std::move(a);
-    /* b should be functional — can acquire and release */
+    /* b should be functional — can acquire fresh SIDs */
     auto sid2 = b.acquire();
     ASSERT_TRUE(sid2.has_value());
     ASSERT_TRUE(sid2->size() >= id::SID_MIN_LEN);
-    ASSERT_TRUE(b.release(*sid));
-    ASSERT_EQ(b.size(), 1u);
+    ASSERT_TRUE(*sid != *sid2);
 }
 
 static void test_sidpool_move_assign() {
-    SidPool a(8, "org", "dev", "iid1");
-    SidPool b(8, "org", "dev", "iid2");
+    SidPool a("org", "dev", "iid1");
+    SidPool b("org", "dev", "iid2");
 
     auto sid_a = a.acquire();
     ASSERT_TRUE(sid_a.has_value());
@@ -294,65 +293,41 @@ static void test_sidpool_move_assign() {
  * 6. SidPool edge cases
  * ================================================================ */
 
-static void test_sidpool_release_invalid_length() {
-    SidPool pool(8, "org", "dev", "iid");
-    /* SID too short (< SID_MIN_LEN=4) */
-    ASSERT_TRUE(!pool.release("AB"));
-    /* SID too long (> SID_MAX_LEN=16) */
-    ASSERT_TRUE(!pool.release("ABCDEFGHJKLMNPQRS"));
-    ASSERT_EQ(pool.size(), 0u);
+static void test_sidpool_acquire_unique_null_check() {
+    SidPool pool("org", "dev", "iid");
+    /* Null collision check returns nullopt */
+    auto sid = pool.acquire_unique(nullptr);
+    ASSERT_TRUE(!sid.has_value());
 }
 
-static void test_sidpool_overflow_eviction() {
-    /* Pool capacity=2. Release 3 SIDs — oldest gets evicted */
-    SidPool pool(2, "org", "dev", "iid");
+static void test_sidpool_different_identity_different_sids() {
+    /* Different identity produces different SIDs */
+    SidPool pool_a("org", "dev", "iid1");
+    SidPool pool_b("org", "dev", "iid2");
 
-    ASSERT_TRUE(pool.release("ABCD"));
-    ASSERT_TRUE(pool.release("EFGH"));
-    ASSERT_EQ(pool.size(), 2u);
-
-    /* 3rd release: evicts "ABCD" (oldest) */
-    ASSERT_TRUE(pool.release("JKLM"));
-    ASSERT_EQ(pool.size(), 2u);
-
-    /* Acquire: should get "EFGH" (oldest remaining), then "JKLM" */
-    auto s1 = pool.acquire();
-    ASSERT_TRUE(s1.has_value());
-    ASSERT_TRUE(*s1 == "EFGH");
-
-    auto s2 = pool.acquire();
-    ASSERT_TRUE(s2.has_value());
-    ASSERT_TRUE(*s2 == "JKLM");
+    auto sid_a = pool_a.acquire();
+    auto sid_b = pool_b.acquire();
+    ASSERT_TRUE(sid_a.has_value());
+    ASSERT_TRUE(sid_b.has_value());
+    ASSERT_TRUE(*sid_a != *sid_b);
 }
 
 static void test_sidpool_invalid_args() {
-    /* Capacity 0 */
-    bool threw = false;
-    try { SidPool pool(0, "o", "d", "i"); }
-    catch (const std::invalid_argument&) { threw = true; }
-    ASSERT_TRUE(threw);
-
-    /* Capacity > SID_POOL_MAX */
-    threw = false;
-    try { SidPool pool(id::SID_POOL_MAX + 1, "o", "d", "i"); }
-    catch (const std::invalid_argument&) { threw = true; }
-    ASSERT_TRUE(threw);
-
     /* Empty OID */
-    threw = false;
-    try { SidPool pool(8, "", "d", "i"); }
+    bool threw = false;
+    try { SidPool pool("", "d", "i"); }
     catch (const std::invalid_argument&) { threw = true; }
     ASSERT_TRUE(threw);
 
     /* Empty DID */
     threw = false;
-    try { SidPool pool(8, "o", "", "i"); }
+    try { SidPool pool("o", "", "i"); }
     catch (const std::invalid_argument&) { threw = true; }
     ASSERT_TRUE(threw);
 
     /* Empty IID */
     threw = false;
-    try { SidPool pool(8, "o", "d", ""); }
+    try { SidPool pool("o", "d", ""); }
     catch (const std::invalid_argument&) { threw = true; }
     ASSERT_TRUE(threw);
 }
@@ -901,8 +876,8 @@ void test_depth_run(int& out_run, int& out_passed) {
     TEST(test_sidpool_move_assign);
 
     /* 6. SidPool edge cases */
-    TEST(test_sidpool_release_invalid_length);
-    TEST(test_sidpool_overflow_eviction);
+    TEST(test_sidpool_acquire_unique_null_check);
+    TEST(test_sidpool_different_identity_different_sids);
     TEST(test_sidpool_invalid_args);
 
     /* 7. Context session_accept */

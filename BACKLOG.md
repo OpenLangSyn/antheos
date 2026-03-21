@@ -1,13 +1,13 @@
 # libantheos Backlog
 
 **Maintained by:** Are Bjorby
-**Last updated:** 2026-03-16
+**Last updated:** 2026-03-21
 
 ---
 
 ## Recovery
 
-**Last session:** 2026-03-16 — AC-09 purity audit + depth tests (205→268).
+**Last session:** 2026-03-21 — AC-10 SID rotation (recycling removed, fresh per session).
 **Next picks:** None active. Library is feature-complete (268/268 tests).
 
 ---
@@ -22,6 +22,7 @@ None.
 
 | ID | What | When |
 |----|------|------|
+| AC-10 | SID rotation — kill recycling, fresh SID per session, LE byte order fix | 2026-03-21 |
 | AC-09 | Purity audit + depth test suite — 205→268 tests | 2026-03-16 |
 | AC-08 | Standalone purity: caller-provided entropy, remove POSIX deps | 2026-03-16 |
 | AC-07 | Swap antheos-cpp → antheos (directory consolidation) | 2026-03-16 |

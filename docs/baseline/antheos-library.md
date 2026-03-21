@@ -1,6 +1,6 @@
 # libantheos C++17
 
-Updated: 2026-03-17
+Updated: 2026-03-21
 
 ## What It Is
 
@@ -24,7 +24,7 @@ No C11 layer underneath.
 |------|-------|---------|
 | wire.cpp | ~150 | Control chars, word types, validation, encode/decode |
 | parser.cpp | ~260 | 11-state byte-at-a-time stream parser |
-| identity.cpp | ~265 | FNV-1a, base-32, BID/SID generation, SidPool |
+| identity.cpp | ~195 | FNV-1a, base-32, BID/SID generation, SidPool |
 | bus.cpp | ~390 | All 26 frame builders: 14 bus + 3 service + 9 session (19 protocol verbs + convenience variants) |
 | context.cpp | ~310 | High-level stateful API: identity, sessions, feed, dispatch |
 
@@ -86,7 +86,7 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 | test_bus | 18 | All 14 bus frame builders (10 protocol verbs + convenience variants) |
 | test_session | 14 | K/T/N/L/U/F session verbs, MID wrap |
 | test_parser | 12 | Stream parser state machine |
-| test_identity | 15 | Base-32, BID/SID generation, pool |
+| test_identity | 15 | Base-32, BID/SID generation, rotation |
 | test_service | 7 | Q/O/A service verbs |
 | test_depth | 63 | Frame class, tail handling, move semantics, session_accept, dispatch, decode edge cases |
 
@@ -113,6 +113,6 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 ## Known Issues
 
 - Parser enters ERROR state on unexpected SOM mid-parse (recovers by scanning for next SOM)
-- SID hash collisions theoretically possible (FNV-1a on "OID:DID:IID:counter")
+- SID hash collisions theoretically possible at short lengths (FNV-1a on "OID:DID:IID:counter", mitigated by LE byte order and length growth on collision)
 - Empty capability string accepted in Q-verb (no validation)
 - No trace integration yet (deferred)

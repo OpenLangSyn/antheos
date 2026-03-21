@@ -1,7 +1,7 @@
 /*
  * identity.cpp — Antheos Protocol v9 Identity
  *
- * Base-32 encoding, BID/SID generation, and SID recycling pool
+ * Base-32 encoding, BID/SID generation, and SID generator
  * per Antheos Protocol 1.0 Level 1, v9 specification (§5.4-5.6, §11.2).
  *
  * Copyright (c) 2025-2026 Are Bjorby <are.bjorby@proton.me>
@@ -98,18 +98,18 @@ std::optional<std::string> sid_generate(
     if (n < 0 || static_cast<size_t>(n) >= sizeof(input))
         return std::nullopt;
 
-    /* Primary FNV-1a hash → 8 bytes (big-endian) */
+    /* Primary FNV-1a hash → 8 bytes (little-endian for truncation quality) */
     uint64_t h1 = fnv1a_64(reinterpret_cast<const uint8_t*>(input),
                             static_cast<size_t>(n));
     uint8_t hash_bytes[16];
-    for (int i = 7; i >= 0; i--) {
+    for (int i = 0; i < 8; i++) {
         hash_bytes[i] = static_cast<uint8_t>(h1 & 0xFFu);
         h1 >>= 8;
     }
 
     /* Secondary hash for extension — needed for len > 12 */
     uint64_t h2 = fnv1a_64(hash_bytes, 8);
-    for (int i = 7; i >= 0; i--) {
+    for (int i = 0; i < 8; i++) {
         hash_bytes[8 + i] = static_cast<uint8_t>(h2 & 0xFFu);
         h2 >>= 8;
     }
@@ -125,34 +125,24 @@ std::optional<std::string> sid_generate(
 /* ── SidPool ── */
 
 struct SidPool::Impl {
-    std::vector<std::string> sids;
-    std::vector<size_t> sid_lengths;
-    size_t capacity;
-    size_t pool_size = 0;
-    size_t head = 0;
-    size_t tail = 0;
-    uint32_t next_counter = 0;
-
     std::string oid;
     std::string did;
     std::string iid;
+    uint32_t next_counter = 0;
 
     size_t initial_len = id::SID_MIN_LEN;
     size_t current_len = id::SID_MIN_LEN;
     size_t max_len = id::SID_MAX_LEN;
 
-    Impl(size_t cap, std::string_view o, std::string_view d, std::string_view i)
-        : sids(cap), sid_lengths(cap, 0), capacity(cap),
-          oid(o), did(d), iid(i) {}
+    Impl(std::string_view o, std::string_view d, std::string_view i)
+        : oid(o), did(d), iid(i) {}
 };
 
-SidPool::SidPool(size_t capacity, std::string_view oid,
+SidPool::SidPool(std::string_view oid,
                  std::string_view did, std::string_view iid) {
-    if (capacity == 0 || capacity > id::SID_POOL_MAX ||
-        oid.empty() || did.empty() || iid.empty()) {
-        throw std::invalid_argument("SidPool: invalid arguments");
-    }
-    impl_ = std::make_unique<Impl>(capacity, oid, did, iid);
+    if (oid.empty() || did.empty() || iid.empty())
+        throw std::invalid_argument("SidPool: OID, DID, IID must be non-empty");
+    impl_ = std::make_unique<Impl>(oid, did, iid);
 }
 
 SidPool::~SidPool() = default;
@@ -161,17 +151,6 @@ SidPool& SidPool::operator=(SidPool&&) noexcept = default;
 
 std::optional<std::string> SidPool::acquire() {
     auto& p = *impl_;
-
-    /* Prefer recycled SID (oldest first) */
-    if (p.pool_size > 0) {
-        size_t idx = p.head;
-        std::string sid = std::move(p.sids[idx]);
-        p.head = (p.head + 1) % p.capacity;
-        p.pool_size--;
-        return sid;
-    }
-
-    /* Generate fresh SID */
     auto sid = id::sid_generate(p.oid, p.did, p.iid,
                                 p.next_counter, p.current_len);
     if (!sid) return std::nullopt;
@@ -183,27 +162,7 @@ std::optional<std::string> SidPool::acquire_unique(CollisionCheck check) {
     if (!check) return std::nullopt;
     auto& p = *impl_;
 
-    /* 1. Scan recycled SIDs oldest-first */
-    for (size_t i = 0; i < p.pool_size; i++) {
-        size_t idx = (p.head + i) % p.capacity;
-
-        if (!check(p.sids[idx])) {
-            std::string sid = std::move(p.sids[idx]);
-
-            /* Remove at logical position i by shifting */
-            for (size_t j = i + 1; j < p.pool_size; j++) {
-                size_t dst = (p.head + j - 1) % p.capacity;
-                size_t src = (p.head + j) % p.capacity;
-                p.sids[dst] = std::move(p.sids[src]);
-                p.sid_lengths[dst] = p.sid_lengths[src];
-            }
-            p.tail = (p.tail == 0) ? p.capacity - 1 : p.tail - 1;
-            p.pool_size--;
-            return sid;
-        }
-    }
-
-    /* 2. Generate fresh per v9 §11.2 — up to 3 full cycles */
+    /* Generate fresh per §11.2 — up to 3 full cycles */
     size_t full_cycles = 0;
     while (full_cycles < 3) {
         auto sid = id::sid_generate(p.oid, p.did, p.iid,
@@ -226,29 +185,6 @@ std::optional<std::string> SidPool::acquire_unique(CollisionCheck check) {
     }
 
     return std::nullopt;
-}
-
-bool SidPool::release(std::string_view sid) {
-    if (sid.size() < id::SID_MIN_LEN || sid.size() > id::SID_MAX_LEN)
-        return false;
-
-    auto& p = *impl_;
-
-    /* Pool full: evict oldest */
-    if (p.pool_size >= p.capacity) {
-        p.head = (p.head + 1) % p.capacity;
-        p.pool_size--;
-    }
-
-    p.sids[p.tail] = std::string(sid);
-    p.sid_lengths[p.tail] = sid.size();
-    p.tail = (p.tail + 1) % p.capacity;
-    p.pool_size++;
-    return true;
-}
-
-size_t SidPool::size() const {
-    return impl_->pool_size;
 }
 
 } // namespace antheos

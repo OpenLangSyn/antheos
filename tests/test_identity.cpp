@@ -1,7 +1,7 @@
 /*
  * test_identity.cpp — Tests for antheos::id and antheos::SidPool
  *
- * Verifies base-32 encoding, BID/SID generation, and SID pool recycling
+ * Verifies base-32 encoding, BID/SID generation, and SID rotation
  * per Antheos Protocol v9 §5.4-5.6, §11.2.
  */
 
@@ -118,14 +118,16 @@ static void test_sid_determinism() {
 /* ── 9. SID pool init ── */
 
 static void test_sid_pool_init_basic() {
-    SidPool pool(16, "org1", "Thermo", "SN00482");
-    ASSERT_EQ(pool.size(), 0u);
+    SidPool pool("org1", "Thermo", "SN00482");
+    auto sid = pool.acquire();
+    ASSERT_TRUE(sid.has_value());
+    ASSERT_TRUE(sid->size() >= id::SID_MIN_LEN);
 }
 
 /* ── 10. SID pool acquire — valid non-empty string ── */
 
 static void test_sid_pool_acquire() {
-    SidPool pool(16, "org1", "Thermo", "SN00482");
+    SidPool pool("org1", "Thermo", "SN00482");
     auto sid = pool.acquire();
     ASSERT_TRUE(sid.has_value());
     ASSERT_TRUE(sid->size() >= id::SID_MIN_LEN);
@@ -135,7 +137,7 @@ static void test_sid_pool_acquire() {
 /* ── 11. SID pool acquire multiple — all unique via acquire_unique ── */
 
 static void test_sid_pool_acquire_multiple() {
-    SidPool pool(16, "org1", "Thermo", "SN00482");
+    SidPool pool("org1", "Thermo", "SN00482");
     std::string sids[10];
 
     for (int i = 0; i < 10; i++) {
@@ -156,76 +158,59 @@ static void test_sid_pool_acquire_multiple() {
     }
 }
 
-/* ── 12. SID pool release and reacquire — oldest-first recycling ── */
+/* ── 12. SID rotation — consecutive acquires produce different SIDs ── */
 
-static void test_sid_pool_release_reacquire() {
-    SidPool pool(16, "org1", "Thermo", "SN00482");
+static void test_sid_rotation_fresh() {
+    SidPool pool("org1", "Thermo", "SN00482");
 
-    auto sid_orig = pool.acquire();
-    ASSERT_TRUE(sid_orig.has_value());
-
-    ASSERT_TRUE(pool.release(*sid_orig));
-    ASSERT_EQ(pool.size(), 1u);
-
-    auto sid_reused = pool.acquire();
-    ASSERT_TRUE(sid_reused.has_value());
-    ASSERT_TRUE(*sid_orig == *sid_reused);
-    ASSERT_EQ(pool.size(), 0u);
+    auto sid1 = pool.acquire();
+    auto sid2 = pool.acquire();
+    ASSERT_TRUE(sid1.has_value());
+    ASSERT_TRUE(sid2.has_value());
+    ASSERT_TRUE(*sid1 != *sid2);
 }
 
-/* ── 13. SID pool exhaustion — fill pool to capacity, drain, then fresh ── */
+/* ── 13. SID rotation — many acquires all unique (no reuse) ── */
 
-static void test_sid_pool_exhaustion() {
-    size_t capacity = 4;
-    SidPool pool(capacity, "org1", "Thermo", "SN00482");
-    std::string sids[4];
+static void test_sid_rotation_no_reuse() {
+    SidPool pool("org1", "Thermo", "SN00482");
+    std::string sids[32];
 
-    for (size_t i = 0; i < capacity; i++) {
+    for (int i = 0; i < 32; i++) {
         auto s = pool.acquire();
         ASSERT_TRUE(s.has_value());
         sids[i] = *s;
     }
-    for (size_t i = 0; i < capacity; i++) {
-        ASSERT_TRUE(pool.release(sids[i]));
-    }
-    ASSERT_EQ(pool.size(), capacity);
 
-    std::string out;
-    for (size_t i = 0; i < capacity; i++) {
-        auto s = pool.acquire();
-        ASSERT_TRUE(s.has_value());
-        out = *s;
+    for (int i = 0; i < 32; i++) {
+        for (int j = i + 1; j < 32; j++) {
+            ASSERT_TRUE(sids[i] != sids[j]);
+        }
     }
-    ASSERT_EQ(pool.size(), 0u);
-
-    auto fresh = pool.acquire();
-    ASSERT_TRUE(fresh.has_value());
-    ASSERT_TRUE(fresh->size() >= id::SID_MIN_LEN);
 }
 
-/* ── 14. SID pool release then acquire — FIFO order ── */
+/* ── 14. SID rotation — acquire_unique never repeats ── */
 
-static void test_sid_pool_release_then_acquire() {
-    SidPool pool(16, "org1", "Thermo", "SN00482");
+static void test_sid_rotation_unique_never_repeats() {
+    SidPool pool("org1", "Thermo", "SN00482");
+    std::string all[20];
 
-    auto sid_a = pool.acquire();
-    auto sid_b = pool.acquire();
-    ASSERT_TRUE(sid_a.has_value());
-    ASSERT_TRUE(sid_b.has_value());
+    for (int i = 0; i < 20; i++) {
+        auto sid = pool.acquire_unique([&](std::string_view candidate) -> bool {
+            for (int j = 0; j < i; j++) {
+                if (all[j] == candidate) return true;
+            }
+            return false;
+        });
+        ASSERT_TRUE(sid.has_value());
+        all[i] = *sid;
+    }
 
-    ASSERT_TRUE(pool.release(*sid_a));
-    ASSERT_TRUE(pool.release(*sid_b));
-    ASSERT_EQ(pool.size(), 2u);
-
-    auto out1 = pool.acquire();
-    ASSERT_TRUE(out1.has_value());
-    ASSERT_TRUE(*out1 == *sid_a);
-
-    auto out2 = pool.acquire();
-    ASSERT_TRUE(out2.has_value());
-    ASSERT_TRUE(*out2 == *sid_b);
-
-    ASSERT_EQ(pool.size(), 0u);
+    for (int i = 0; i < 20; i++) {
+        for (int j = i + 1; j < 20; j++) {
+            ASSERT_TRUE(all[i] != all[j]);
+        }
+    }
 }
 
 /* ── 15. Invalid argument handling ── */
@@ -257,9 +242,9 @@ void test_identity_run(int& out_run, int& out_passed) {
     TEST(test_sid_pool_init_basic);
     TEST(test_sid_pool_acquire);
     TEST(test_sid_pool_acquire_multiple);
-    TEST(test_sid_pool_release_reacquire);
-    TEST(test_sid_pool_exhaustion);
-    TEST(test_sid_pool_release_then_acquire);
+    TEST(test_sid_rotation_fresh);
+    TEST(test_sid_rotation_no_reuse);
+    TEST(test_sid_rotation_unique_never_repeats);
     TEST(test_invalid_arguments);
     out_run    = tests_run;
     out_passed = tests_passed;
