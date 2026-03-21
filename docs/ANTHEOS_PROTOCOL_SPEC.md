@@ -738,6 +738,8 @@ Wire:    ☻↕!→Q►↕"→temperature►♥
 
 Instances that can provide the requested service respond with an offer. The offer includes the responding instance's BID and a description of what it provides. The offer implicitly defines the interface — there is no separate interface definition language.
 
+An Offer MUST only be sent in response to a Query. Unsolicited Offers (broadcasting capabilities at startup or at any time without a preceding Query) are prohibited. This prevents capability enumeration by passive observers and enforces the demand-driven discovery model described in Section 8.2.
+
 ```
 Pseudo:  [SOM] [SOW]!O[EOW] [SOW]@[SOR]U[SOB]4T9X2[EOW] [SOW]"[SOB]temperature_celsius[EOW] [EOM]
 Wire:    ☻↕!→O►↕@♦U→4T9X2►↕"→temperature_celsius►♥
@@ -1016,6 +1018,7 @@ Antheos Level 1 provides no encryption, authentication, or integrity protection.
 - **No authentication**: BIDs are self-asserted through Establish/Conflict. Any instance can claim any available BID. The Verify verb provides identity disclosure but not identity proof.
 - **No integrity**: Messages can be modified in transit on shared buses. There is no checksum or signature mechanism at Level 1.
 - **BID spoofing**: An adversary can claim a BID that was previously held by another instance after that instance disconnects.
+- **Capability enumeration**: A passive observer on a shared bus can catalogue available services by monitoring Query/Offer traffic. Unsolicited Offer broadcasts would make this trivial without any traffic generation; the prohibition in Section 10.2 limits enumeration to active observation of demand-driven exchanges.
 
 Applications requiring security implement encryption and authentication as a higher-level service, negotiated through Query/Offer/Accept. The Antheos frame structure (typed words, delimited boundaries) provides clear attachment points for security wrappers around message content.
 
