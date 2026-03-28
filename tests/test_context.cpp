@@ -794,6 +794,52 @@ static void test_feed_session_call_target_bid(void)
 }
 
 /* ══════════════════════════════════════════════════════════════
+ * Verify response 3-ID dispatch tests (44–45)
+ * ══════════════════════════════════════════════════════════════ */
+
+/* 44. Verify response — event_cb receives OID, DID, IID in id/id2/detail */
+static void test_feed_verify_response(void)
+{
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
+    CbState state;
+    wire_event_cb(ctx, state);
+
+    /* Build a Verify response: V + OID + DID + IID (all plain radix) */
+    Context remote("langsyn", "Rover", "SN042", "REMOTE01");
+    auto f = remote.verify_response();
+    ASSERT_TRUE(f.has_value());
+    ASSERT_TRUE(frame_valid(*f));
+    ASSERT_TRUE(frame_has_verb(*f, 'V'));
+
+    ctx.feed(f->data(), f->size());
+
+    ASSERT_EQ(state.event_count, 1);
+    ASSERT_TRUE(state.last_verb == "V");
+    ASSERT_TRUE(state.last_id == "langsyn");      /* OID */
+    ASSERT_TRUE(state.last_id2 == "Rover");        /* DID */
+    ASSERT_TRUE(state.last_detail == "SN042");     /* IID */
+}
+
+/* 45. Verify request — event_cb receives target BID only (no DID/IID) */
+static void test_feed_verify_request(void)
+{
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
+    CbState state;
+    wire_event_cb(ctx, state);
+
+    auto f = ctx.verify("4T9X2");
+    ASSERT_TRUE(f.has_value());
+
+    ctx.feed(f->data(), f->size());
+
+    ASSERT_EQ(state.event_count, 1);
+    ASSERT_TRUE(state.last_verb == "V");
+    ASSERT_TRUE(state.last_id == "4T9X2");         /* target BID */
+    ASSERT_TRUE(state.last_id2.empty());            /* no DID */
+    ASSERT_TRUE(state.last_detail.empty());         /* no IID */
+}
+
+/* ══════════════════════════════════════════════════════════════
  * Suite entry point
  * ══════════════════════════════════════════════════════════════ */
 
@@ -858,6 +904,10 @@ void test_context_run(int& out_run, int& out_passed)
 
     /* K-frame target BID feed-through */
     TEST(test_feed_session_call_target_bid);
+
+    /* Verify response 3-ID dispatch */
+    TEST(test_feed_verify_response);
+    TEST(test_feed_verify_request);
 
     out_run    = tests_run;
     out_passed = tests_passed;

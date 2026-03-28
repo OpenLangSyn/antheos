@@ -114,10 +114,20 @@ struct Context::Impl {
 
         switch (scratch_verb) {
         /* Bus events: ID-carrying verbs */
-        case 'E': case 'C': case 'P': case 'D': case 'V': case 'W':
+        case 'E': case 'C': case 'P': case 'D': case 'W':
             if (event_cb)
                 event_cb(verb, id0, id1, {});
             break;
+
+        /* Verify: responses carry 3 IDs (OID, DID, IID), requests carry 1 */
+        case 'V': {
+            if (event_cb) {
+                std::string_view id2 = scratch_id_count > 2
+                    ? std::string_view(scratch_ids[2]) : std::string_view{};
+                event_cb(verb, id0, id1, id2);
+            }
+            break;
+        }
 
         /* Bus events: text-carrying verbs */
         case 'B': case 'X':
