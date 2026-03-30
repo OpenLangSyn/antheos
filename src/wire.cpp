@@ -267,4 +267,10 @@ std::optional<std::vector<uint8_t>> encode_path(std::string_view path) {
                        reinterpret_cast<const uint8_t*>(path.data()), path.size());
 }
 
+std::optional<std::vector<uint8_t>> encode_message(std::string_view ref) {
+    if (ref.empty()) return std::nullopt;
+    return word_encode(WordType::Message, Radix::None, Unit::None,
+                       reinterpret_cast<const uint8_t*>(ref.data()), ref.size());
+}
+
 } // namespace antheos::wire

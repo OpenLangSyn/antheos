@@ -154,6 +154,7 @@ std::optional<std::vector<uint8_t>> encode_integer(
     Radix radix, Unit unit, std::string_view value);
 std::optional<std::vector<uint8_t>> encode_logical(std::string_view expr);
 std::optional<std::vector<uint8_t>> encode_path(std::string_view path);
+std::optional<std::vector<uint8_t>> encode_message(std::string_view ref);
 
 } // namespace wire
 
@@ -286,6 +287,13 @@ std::optional<Frame> auth_response(std::string_view target_bid,
                                    std::string_view key_id,
                                    std::string_view sig_hex);
 
+/* Level 2: Relay + Auth — Z-verb wrapped in Relay for multi-hop */
+std::optional<Frame> relay_auth_challenge(std::string_view target_bid,
+    std::string_view nonce_hex, uint32_t index, std::string_view path);
+std::optional<Frame> relay_auth_response(std::string_view target_bid,
+    std::string_view key_id, std::string_view sig_hex,
+    uint32_t index, std::string_view path);
+
 } // namespace bus
 
 namespace service {
@@ -333,6 +341,10 @@ public:
     using EventCb = std::function<void(
         std::string_view verb, std::string_view id,
         std::string_view id2, std::string_view detail)>;
+    using RelayCb = std::function<void(
+        char message_ref, std::string_view id,
+        std::string_view id2, std::string_view body,
+        uint32_t index, std::string_view path)>;
 
     Context(std::string_view oid, std::string_view did,
             std::string_view iid, std::string_view bid);
@@ -346,6 +358,7 @@ public:
     void on_message(MessageCb cb);
     void on_offer(OfferCb cb);
     void on_event(EventCb cb);
+    void on_relay(RelayCb cb);
 
     size_t feed(const uint8_t* data, size_t len);
 
@@ -370,6 +383,13 @@ public:
     std::optional<Frame> auth_response(std::string_view target_bid,
                                        std::string_view key_id,
                                        std::string_view sig_hex);
+
+    // Relay + Auth (Level 2: multi-hop Z-verb)
+    std::optional<Frame> relay_auth_challenge(std::string_view target_bid,
+        std::string_view nonce_hex, uint32_t index, std::string_view path);
+    std::optional<Frame> relay_auth_response(std::string_view target_bid,
+        std::string_view key_id, std::string_view sig_hex,
+        uint32_t index, std::string_view path);
 
     // Session scope
     int session_open();

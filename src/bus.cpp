@@ -76,6 +76,13 @@ struct FrameBuilder {
         return true;
     }
 
+    bool message(std::string_view ref) {
+        auto w = wire::encode_message(ref);
+        if (!w) return false;
+        buf.insert(buf.end(), w->begin(), w->end());
+        return true;
+    }
+
     std::optional<Frame> finish() {
         return Frame(std::move(buf));
     }
@@ -247,6 +254,50 @@ std::optional<Frame> auth_response(std::string_view target_bid,
     if (!fb.id_base32(target_bid)) return std::nullopt;
     if (!fb.id_plain(key_id)) return std::nullopt;
     if (!fb.text(sig_hex)) return std::nullopt;
+    fb.eom();
+    return fb.finish();
+}
+
+/* ── Level 2: Relay + Auth (multi-hop Z-verb) ─────────────────── */
+
+std::optional<Frame> relay_auth_challenge(std::string_view target_bid,
+    std::string_view nonce_hex, uint32_t index, std::string_view path) {
+    if (target_bid.empty() || nonce_hex.empty() || path.empty())
+        return std::nullopt;
+
+    char idx_str[16];
+    std::snprintf(idx_str, sizeof(idx_str), "%u", index);
+
+    FrameBuilder fb;
+    fb.som();
+    if (!fb.symbol('R')) return std::nullopt;
+    if (!fb.id_base32(target_bid)) return std::nullopt;
+    if (!fb.message("Z")) return std::nullopt;
+    if (!fb.text(nonce_hex)) return std::nullopt;
+    if (!fb.integer(wire::Radix::Decimal, wire::Unit::Byte, idx_str)) return std::nullopt;
+    if (!fb.path(path)) return std::nullopt;
+    fb.eom();
+    return fb.finish();
+}
+
+std::optional<Frame> relay_auth_response(std::string_view target_bid,
+    std::string_view key_id, std::string_view sig_hex,
+    uint32_t index, std::string_view path) {
+    if (target_bid.empty() || key_id.empty() || sig_hex.empty() || path.empty())
+        return std::nullopt;
+
+    char idx_str[16];
+    std::snprintf(idx_str, sizeof(idx_str), "%u", index);
+
+    FrameBuilder fb;
+    fb.som();
+    if (!fb.symbol('R')) return std::nullopt;
+    if (!fb.id_base32(target_bid)) return std::nullopt;
+    if (!fb.id_plain(key_id)) return std::nullopt;
+    if (!fb.message("Z")) return std::nullopt;
+    if (!fb.text(sig_hex)) return std::nullopt;
+    if (!fb.integer(wire::Radix::Decimal, wire::Unit::Byte, idx_str)) return std::nullopt;
+    if (!fb.path(path)) return std::nullopt;
     fb.eom();
     return fb.finish();
 }

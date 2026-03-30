@@ -141,6 +141,14 @@ struct CbState {
     int offer_count = 0;
     std::string last_offer_bid;
     std::string last_offer_desc;
+
+    int relay_count = 0;
+    char last_relay_ref = 0;
+    std::string last_relay_id;
+    std::string last_relay_id2;
+    std::string last_relay_body;
+    uint32_t last_relay_index = 0;
+    std::string last_relay_path;
 };
 
 static void wire_event_cb(Context& ctx, CbState& state)
@@ -840,6 +848,92 @@ static void test_feed_verify_request(void)
 }
 
 /* ══════════════════════════════════════════════════════════════
+ * Relay dispatch tests (46–49)
+ * ══════════════════════════════════════════════════════════════ */
+
+static void wire_relay_cb(Context& ctx, CbState& state)
+{
+    ctx.on_relay([&state](char ref, std::string_view id,
+                          std::string_view id2, std::string_view body,
+                          uint32_t index, std::string_view path) {
+        state.relay_count++;
+        state.last_relay_ref = ref;
+        state.last_relay_id = std::string(id);
+        state.last_relay_id2 = std::string(id2);
+        state.last_relay_body = std::string(body);
+        state.last_relay_index = index;
+        state.last_relay_path = std::string(path);
+    });
+}
+
+/* 46. Relay Z-challenge — relay_cb fires with correct fields */
+static void test_feed_relay_z_challenge(void)
+{
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
+    CbState state;
+    wire_relay_cb(ctx, state);
+
+    auto f = bus::relay_auth_challenge("4T9X2", "ff00aa", 3, "AA.BB.CC.DD");
+    ASSERT_TRUE(f.has_value());
+    ctx.feed(f->data(), f->size());
+
+    ASSERT_EQ(state.relay_count, 1);
+    ASSERT_EQ(state.last_relay_ref, 'Z');
+    ASSERT_TRUE(state.last_relay_id == "4T9X2");
+    ASSERT_TRUE(state.last_relay_id2.empty());
+    ASSERT_TRUE(state.last_relay_body == "ff00aa");
+    ASSERT_EQ(state.last_relay_index, 3u);
+    ASSERT_TRUE(state.last_relay_path == "AA.BB.CC.DD");
+}
+
+/* 47. Relay Z-response — relay_cb receives key_id in id2 */
+static void test_feed_relay_z_response(void)
+{
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
+    CbState state;
+    wire_relay_cb(ctx, state);
+
+    auto f = bus::relay_auth_response("4T9X2", "k1d2", "s1g2", 2, "AA.BB.CC");
+    ASSERT_TRUE(f.has_value());
+    ctx.feed(f->data(), f->size());
+
+    ASSERT_EQ(state.relay_count, 1);
+    ASSERT_EQ(state.last_relay_ref, 'Z');
+    ASSERT_TRUE(state.last_relay_id == "4T9X2");
+    ASSERT_TRUE(state.last_relay_id2 == "k1d2");
+    ASSERT_TRUE(state.last_relay_body == "s1g2");
+    ASSERT_EQ(state.last_relay_index, 2u);
+    ASSERT_TRUE(state.last_relay_path == "AA.BB.CC");
+}
+
+/* 48. Plain text relay — falls through to event_cb (backward compat) */
+static void test_feed_relay_plain_text(void)
+{
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
+    CbState state;
+    wire_event_cb(ctx, state);
+
+    auto f = bus::relay("Hello", 1, "AA.BB");
+    ASSERT_TRUE(f.has_value());
+    ctx.feed(f->data(), f->size());
+
+    ASSERT_EQ(state.event_count, 1);
+    ASSERT_TRUE(state.last_verb == "R");
+    ASSERT_TRUE(state.last_detail == "Hello");
+}
+
+/* 49. Relay Z-challenge with no relay_cb set — no crash */
+static void test_feed_relay_no_cb(void)
+{
+    Context ctx("VERUS", "Oracle", "SN001", "ABCDEFGH");
+
+    auto f = bus::relay_auth_challenge("4T9X2", "ff00", 1, "AA.BB");
+    ASSERT_TRUE(f.has_value());
+    ctx.feed(f->data(), f->size());
+    /* No crash, no callback fired — that's the test */
+}
+
+/* ══════════════════════════════════════════════════════════════
  * Suite entry point
  * ══════════════════════════════════════════════════════════════ */
 
@@ -908,6 +1002,12 @@ void test_context_run(int& out_run, int& out_passed)
     /* Verify response 3-ID dispatch */
     TEST(test_feed_verify_response);
     TEST(test_feed_verify_request);
+
+    /* Relay dispatch */
+    TEST(test_feed_relay_z_challenge);
+    TEST(test_feed_relay_z_response);
+    TEST(test_feed_relay_plain_text);
+    TEST(test_feed_relay_no_cb);
 
     out_run    = tests_run;
     out_passed = tests_passed;

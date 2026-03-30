@@ -329,6 +329,31 @@ static void test_decode_truncated() {
     ASSERT_TRUE(!dw.has_value());
 }
 
+/* ── encode_message: [SOW]~[SOB]Z[EOW] ──
+ * Wire: 0x12 0x7E 0x1A 'Z' 0x10  (5 bytes)
+ */
+
+static void test_encode_message() {
+    auto result = encode_message("Z");
+    ASSERT_TRUE(result.has_value());
+    const uint8_t expected[] = {0x12, 0x7E, 0x1A, 'Z', 0x10};
+    ASSERT_EQ(result->size(), 5u);
+    ASSERT_MEM_EQ(result->data(), expected, 5);
+
+    auto dw = word_decode(result->data(), result->size());
+    ASSERT_TRUE(dw.has_value());
+    ASSERT_EQ(static_cast<uint8_t>(dw->type), static_cast<uint8_t>(WordType::Message));
+    ASSERT_EQ(static_cast<uint8_t>(dw->radix), 0);
+    ASSERT_EQ(static_cast<uint8_t>(dw->unit), 0);
+    ASSERT_EQ(dw->body.size(), 1u);
+    ASSERT_EQ(dw->body[0], 'Z');
+}
+
+static void test_encode_message_empty() {
+    auto result = encode_message("");
+    ASSERT_TRUE(!result.has_value());
+}
+
 /* ── Suite entry point ── */
 
 void test_wire_run(int& out_run, int& out_passed) {
@@ -350,6 +375,8 @@ void test_wire_run(int& out_run, int& out_passed) {
     TEST(test_encode_integer);
     TEST(test_encode_logical);
     TEST(test_encode_path);
+    TEST(test_encode_message);
+    TEST(test_encode_message_empty);
     TEST(test_word_encode_decode_roundtrip);
     TEST(test_word_encode_decode_with_flags);
     TEST(test_encode_reserved_in_body);

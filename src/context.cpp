@@ -31,6 +31,7 @@ struct Context::Impl {
     Context::MessageCb msg_cb;
     Context::OfferCb offer_cb;
     Context::EventCb event_cb;
+    Context::RelayCb relay_cb;
 
     /* Parser scratch — accumulated during word callbacks, dispatched on EOM */
     static constexpr int MAX_SCRATCH_IDS = 4;
@@ -42,6 +43,12 @@ struct Context::Impl {
     bool scratch_has_mid = false;
     std::string scratch_body;
     bool scratch_has_body = false;
+    char scratch_msg_ref = 0;
+    bool scratch_has_msg_ref = false;
+    uint32_t scratch_integer = 0;
+    bool scratch_has_integer = false;
+    std::string scratch_path;
+    bool scratch_has_path = false;
 
     Impl(std::string_view o, std::string_view d, std::string_view i,
          std::string_view b)
@@ -65,6 +72,12 @@ struct Context::Impl {
         scratch_mid = 0;
         scratch_has_body = false;
         scratch_body.clear();
+        scratch_msg_ref = 0;
+        scratch_has_msg_ref = false;
+        scratch_has_integer = false;
+        scratch_integer = 0;
+        scratch_has_path = false;
+        scratch_path.clear();
     }
 
     void on_parser_word(wire::WordType type, wire::Radix radix,
@@ -94,6 +107,27 @@ struct Context::Impl {
             scratch_body.assign(
                 reinterpret_cast<const char*>(body), len);
             scratch_has_body = true;
+            break;
+
+        case wire::WordType::Message:
+            if (len >= 1) {
+                scratch_msg_ref = static_cast<char>(body[0]);
+                scratch_has_msg_ref = true;
+            }
+            break;
+
+        case wire::WordType::Integer: {
+            std::string tmp(reinterpret_cast<const char*>(body), len);
+            scratch_integer = static_cast<uint32_t>(
+                std::strtoul(tmp.c_str(), nullptr, 10));
+            scratch_has_integer = true;
+            break;
+        }
+
+        case wire::WordType::Path:
+            scratch_path.assign(
+                reinterpret_cast<const char*>(body), len);
+            scratch_has_path = true;
             break;
 
         default:
@@ -128,6 +162,18 @@ struct Context::Impl {
             }
             break;
         }
+
+        /* Relay: dispatch via relay_cb if MESSAGE word present, else event_cb */
+        case 'R':
+            if (scratch_has_msg_ref && relay_cb) {
+                std::string_view path_sv = scratch_has_path
+                    ? std::string_view(scratch_path) : std::string_view{};
+                uint32_t idx = scratch_has_integer ? scratch_integer : 0;
+                relay_cb(scratch_msg_ref, id0, id1, body, idx, path_sv);
+            } else if (event_cb) {
+                event_cb(verb, id0, {}, body);
+            }
+            break;
 
         /* Bus events: text-carrying verbs */
         case 'B': case 'X':
@@ -218,6 +264,7 @@ std::string_view Context::bid() const {
 void Context::on_message(MessageCb cb) { impl_->msg_cb = std::move(cb); }
 void Context::on_offer(OfferCb cb) { impl_->offer_cb = std::move(cb); }
 void Context::on_event(EventCb cb) { impl_->event_cb = std::move(cb); }
+void Context::on_relay(RelayCb cb) { impl_->relay_cb = std::move(cb); }
 
 /* ── Inbound ── */
 
@@ -289,6 +336,19 @@ std::optional<Frame> Context::auth_response(std::string_view target_bid,
                                             std::string_view key_id,
                                             std::string_view sig_hex) {
     return bus::auth_response(target_bid, key_id, sig_hex);
+}
+
+/* ── Outbound — Relay + Auth (Level 2: multi-hop Z-verb) ── */
+
+std::optional<Frame> Context::relay_auth_challenge(std::string_view target_bid,
+    std::string_view nonce_hex, uint32_t index, std::string_view path) {
+    return bus::relay_auth_challenge(target_bid, nonce_hex, index, path);
+}
+
+std::optional<Frame> Context::relay_auth_response(std::string_view target_bid,
+    std::string_view key_id, std::string_view sig_hex,
+    uint32_t index, std::string_view path) {
+    return bus::relay_auth_response(target_bid, key_id, sig_hex, index, path);
 }
 
 /* ── Session helpers ── */
