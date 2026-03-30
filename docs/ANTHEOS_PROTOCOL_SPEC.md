@@ -1036,4 +1036,70 @@ or sold without the prior written permission of the copyright holder.
 
 ---
 
+# Appendix A: Level 2 — Authentication (Z-verb)
+
+*This appendix defines an optional Level 2 extension. A Level 1 implementation is
+complete and conformant without it.*
+
+## A.1 Overview
+
+The Z-verb (Authenticate) provides Ed25519 challenge-response authentication between
+peers. It extends the existing Q/O/A+V handshake with a cryptographic proof step:
+V discloses identity ("I am X"), Z proves it ("Prove you are X").
+
+## A.2 Wire Format
+
+**Challenge (server → client):**
+```
+SOM [!Z] [@U target_bid] ["nonce_hex] EOM
+```
+
+- `target_bid`: Base-32 BID of the peer being challenged
+- `nonce_hex`: 32-byte random nonce, hex-encoded (64 chars)
+
+**Response (client → server):**
+```
+SOM [!Z] [@U target_bid] [@ key_id] ["sig_hex] EOM
+```
+
+- `target_bid`: Base-32 BID of the challenger (server)
+- `key_id`: Plain ID word — hex identifier of the signing key
+- `sig_hex`: Ed25519 signature over the nonce (64 bytes, 128 hex chars)
+
+## A.3 Auth Flow
+
+```
+After Q → O → A → V exchange:
+
+SERVER                                  CLIENT
+  |                                       |
+  |──[Z: client_bid, nonce_hex]──────────>|  challenge
+  |                                       |  (client signs nonce)
+  |<─────[Z: server_bid, key_id, sig_hex]─|  proof
+  |  (server verifies)                    |
+  |                                       |
+  |  Auth OK: session proceeds            |
+  |  Auth FAIL: !X AUTH_FAILED            |
+```
+
+## A.4 Requirements
+
+- Server sends Z-challenge AFTER receiving V-response (identity must be known to
+  look up the peer's trusted public key).
+- Client responds only to Z-challenges addressed to its own BID.
+- Nonce MUST be fresh per challenge (no reuse). Server generates via CSPRNG.
+- If verification fails, server SHOULD send `!X AUTH_FAILED`.
+- Auth is opt-in: peers that don't require auth skip the Z exchange entirely.
+  This preserves backward compatibility with Level 1 peers.
+
+## A.5 Security Notes
+
+- Ed25519 signatures are deterministic (no weak-RNG attack surface).
+- Nonce freshness prevents replay attacks.
+- Z-verb does not provide encryption — message content remains cleartext.
+- The trusted key store (OID → public key mapping) is out of scope for the protocol.
+  It may be a local config file, a key registry service, or any other mechanism.
+
+---
+
 *— End of Antheos Protocol 1.0 Level 1 Specification —*

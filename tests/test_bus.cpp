@@ -145,6 +145,52 @@ static void test_bus_relay() {
     ASSERT_MEM_EQ(f->data(), expected, sizeof(expected));
 }
 
+static void test_bus_auth_challenge() {
+    auto f = bus::auth_challenge("4T9X2", "abcd1234");
+    ASSERT_TRUE(f.has_value());
+    ASSERT_EQ(f->data()[0], 0x02);      /* SOM */
+    ASSERT_EQ(f->data()[4], 0x5A);      /* Z verb */
+    ASSERT_EQ(f->data()[f->size()-1], 0x03); /* EOM */
+}
+
+static void test_bus_auth_challenge_wire() {
+    auto f = bus::auth_challenge("4T9X2", "ff00");
+    ASSERT_TRUE(f.has_value());
+    const uint8_t expected[] = {0x02,
+        0x12,0x21,0x1A,0x5A,0x10,                        /* [!Z] */
+        0x12,0x40,0x04,0x55,0x1A,'4','T','9','X','2',0x10, /* [@U 4T9X2] */
+        0x12,0x22,0x1A,'f','f','0','0',0x10,              /* ["ff00] */
+        0x03};
+    ASSERT_EQ(f->size(), sizeof(expected));
+    ASSERT_MEM_EQ(f->data(), expected, sizeof(expected));
+}
+
+static void test_bus_auth_response() {
+    auto f = bus::auth_response("4T9X2", "abcd1234", "deadbeef");
+    ASSERT_TRUE(f.has_value());
+    ASSERT_EQ(f->data()[0], 0x02);      /* SOM */
+    ASSERT_EQ(f->data()[4], 0x5A);      /* Z verb */
+    ASSERT_EQ(f->data()[f->size()-1], 0x03); /* EOM */
+}
+
+static void test_bus_auth_response_wire() {
+    auto f = bus::auth_response("4T9X2", "k1d2", "s1g2");
+    ASSERT_TRUE(f.has_value());
+    const uint8_t expected[] = {0x02,
+        0x12,0x21,0x1A,0x5A,0x10,                        /* [!Z] */
+        0x12,0x40,0x04,0x55,0x1A,'4','T','9','X','2',0x10, /* [@U 4T9X2] */
+        0x12,0x40,0x1A,'k','1','d','2',0x10,              /* [@ k1d2] */
+        0x12,0x22,0x1A,'s','1','g','2',0x10,              /* ["s1g2] */
+        0x03};
+    ASSERT_EQ(f->size(), sizeof(expected));
+    ASSERT_MEM_EQ(f->data(), expected, sizeof(expected));
+}
+
+static void test_bus_auth_empty_args() {
+    ASSERT_TRUE(!bus::auth_challenge("", "nonce").has_value());
+    ASSERT_TRUE(!bus::auth_response("", "kid", "sig").has_value());
+}
+
 static void test_bus_empty_bid() {
     ASSERT_TRUE(!bus::establish("").has_value());
     ASSERT_TRUE(!bus::conflict("").has_value());
@@ -173,6 +219,11 @@ void test_bus_run(int& out_run, int& out_passed) {
     TEST(test_bus_scaleback_flags_only);
     TEST(test_bus_scaleback_both_absent);
     TEST(test_bus_relay);
+    TEST(test_bus_auth_challenge);
+    TEST(test_bus_auth_challenge_wire);
+    TEST(test_bus_auth_response);
+    TEST(test_bus_auth_response_wire);
+    TEST(test_bus_auth_empty_args);
     TEST(test_bus_empty_bid);
     out_run    = tests_run;
     out_passed = tests_passed;

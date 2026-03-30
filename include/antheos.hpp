@@ -279,6 +279,13 @@ std::optional<Frame> scaleback(
 std::optional<Frame> acknowledge(std::string_view bid);
 std::optional<Frame> exception(std::string_view reason);
 
+/* Level 2: Auth (Z-verb) — Ed25519 challenge-response */
+std::optional<Frame> auth_challenge(std::string_view target_bid,
+                                    std::string_view nonce_hex);
+std::optional<Frame> auth_response(std::string_view target_bid,
+                                   std::string_view key_id,
+                                   std::string_view sig_hex);
+
 } // namespace bus
 
 namespace service {
@@ -356,6 +363,13 @@ public:
     std::optional<Frame> query(std::string_view capability);
     std::optional<Frame> offer(std::string_view description);
     std::optional<Frame> accept(std::string_view bid, std::string_view sender_bid = {});
+
+    // Auth scope (Level 2)
+    std::optional<Frame> auth_challenge(std::string_view target_bid,
+                                        std::string_view nonce_hex);
+    std::optional<Frame> auth_response(std::string_view target_bid,
+                                       std::string_view key_id,
+                                       std::string_view sig_hex);
 
     // Session scope
     int session_open();

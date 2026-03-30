@@ -135,6 +135,12 @@ struct Context::Impl {
                 event_cb(verb, id0, {}, body);
             break;
 
+        /* Auth: Z-verb (Level 2) — challenge or response */
+        case 'Z':
+            if (event_cb)
+                event_cb(verb, id0, id1, body);
+            break;
+
         /* Service: query */
         case 'Q':
             if (event_cb)
@@ -270,6 +276,19 @@ std::optional<Frame> Context::offer(std::string_view description) {
 std::optional<Frame> Context::accept(std::string_view bid,
                                      std::string_view sender_bid) {
     return service::accept(bid, sender_bid);
+}
+
+/* ── Outbound — Auth Scope (Level 2) ── */
+
+std::optional<Frame> Context::auth_challenge(std::string_view target_bid,
+                                             std::string_view nonce_hex) {
+    return bus::auth_challenge(target_bid, nonce_hex);
+}
+
+std::optional<Frame> Context::auth_response(std::string_view target_bid,
+                                            std::string_view key_id,
+                                            std::string_view sig_hex) {
+    return bus::auth_response(target_bid, key_id, sig_hex);
 }
 
 /* ── Session helpers ── */

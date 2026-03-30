@@ -225,6 +225,32 @@ std::optional<Frame> acknowledge(std::string_view bid) {
     return fb.finish();
 }
 
+/* ── Level 2: Auth (Z-verb) ────────────────────────────────────── */
+
+std::optional<Frame> auth_challenge(std::string_view target_bid,
+                                    std::string_view nonce_hex) {
+    FrameBuilder fb;
+    fb.som();
+    if (!fb.symbol('Z')) return std::nullopt;
+    if (!fb.id_base32(target_bid)) return std::nullopt;
+    if (!fb.text(nonce_hex)) return std::nullopt;
+    fb.eom();
+    return fb.finish();
+}
+
+std::optional<Frame> auth_response(std::string_view target_bid,
+                                   std::string_view key_id,
+                                   std::string_view sig_hex) {
+    FrameBuilder fb;
+    fb.som();
+    if (!fb.symbol('Z')) return std::nullopt;
+    if (!fb.id_base32(target_bid)) return std::nullopt;
+    if (!fb.id_plain(key_id)) return std::nullopt;
+    if (!fb.text(sig_hex)) return std::nullopt;
+    fb.eom();
+    return fb.finish();
+}
+
 std::optional<Frame> exception(std::string_view reason) {
     FrameBuilder fb;
     fb.som();

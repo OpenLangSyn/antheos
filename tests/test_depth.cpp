@@ -644,6 +644,38 @@ static void test_dispatch_session_finish() {
 }
 
 /* ================================================================
+ * 10b. Auth (Z-verb) dispatch
+ * ================================================================ */
+
+static void test_dispatch_auth_challenge() {
+    DispatchState s;
+    Context ctx("ORG", "Dev", "SN001", "ABCDEFGH");
+    wire_ctx(ctx, s);
+    auto f = bus::auth_challenge("4T9X2", "deadbeef01234567");
+    ASSERT_TRUE(f.has_value());
+    ctx.feed(f->data(), f->size());
+    ASSERT_EQ(s.event_count, 1);
+    ASSERT_TRUE(s.last_verb == "Z");
+    ASSERT_TRUE(s.last_id == "4T9X2");
+    ASSERT_TRUE(s.last_id2.empty());                   /* no key_id */
+    ASSERT_TRUE(s.last_detail == "deadbeef01234567");   /* nonce */
+}
+
+static void test_dispatch_auth_response() {
+    DispatchState s;
+    Context ctx("ORG", "Dev", "SN001", "ABCDEFGH");
+    wire_ctx(ctx, s);
+    auto f = bus::auth_response("4T9X2", "kid123", "sig456");
+    ASSERT_TRUE(f.has_value());
+    ctx.feed(f->data(), f->size());
+    ASSERT_EQ(s.event_count, 1);
+    ASSERT_TRUE(s.last_verb == "Z");
+    ASSERT_TRUE(s.last_id == "4T9X2");
+    ASSERT_TRUE(s.last_id2 == "kid123");       /* key_id */
+    ASSERT_TRUE(s.last_detail == "sig456");    /* signature */
+}
+
+/* ================================================================
  * 11. word_decode — malformed input rejection
  * ================================================================ */
 
@@ -909,6 +941,10 @@ void test_depth_run(int& out_run, int& out_passed) {
     TEST(test_dispatch_session_locate);
     TEST(test_dispatch_session_resume);
     TEST(test_dispatch_session_finish);
+
+    /* 10b. Auth (Z-verb) dispatch */
+    TEST(test_dispatch_auth_challenge);
+    TEST(test_dispatch_auth_response);
 
     /* 11. word_decode malformed */
     TEST(test_decode_null_input);
