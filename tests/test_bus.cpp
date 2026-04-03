@@ -242,6 +242,91 @@ static void test_bus_relay_auth_empty_args() {
     ASSERT_TRUE(!bus::relay_auth_response("BID", "kid", "sig", 1, "").has_value());
 }
 
+/* ── Exception code constants (spec §13 + Appendix A) ── */
+
+static void test_exc_bus_codes() {
+    /* Verify string values match spec §13 exactly */
+    ASSERT_TRUE(std::strcmp(exc::BID_OVERFLOW, "BID_OVERFLOW") == 0);
+    ASSERT_TRUE(std::strcmp(exc::BID_TIMEOUT, "BID_TIMEOUT") == 0);
+    ASSERT_TRUE(std::strcmp(exc::RELAY_FAILED, "RELAY_FAILED") == 0);
+    ASSERT_TRUE(std::strcmp(exc::PATH_BROKEN, "PATH_BROKEN") == 0);
+    ASSERT_TRUE(std::strcmp(exc::INDEX_INVALID, "INDEX_INVALID") == 0);
+    ASSERT_TRUE(std::strcmp(exc::UNKNOWN_BID, "UNKNOWN_BID") == 0);
+    ASSERT_TRUE(std::strcmp(exc::MALFORMED_FRAME, "MALFORMED_FRAME") == 0);
+    ASSERT_TRUE(std::strcmp(exc::UNSUPPORTED_TYPE, "UNSUPPORTED_TYPE") == 0);
+}
+
+static void test_exc_service_codes() {
+    ASSERT_TRUE(std::strcmp(exc::SERVICE_UNKNOWN, "SERVICE_UNKNOWN") == 0);
+    ASSERT_TRUE(std::strcmp(exc::OFFER_EXPIRED, "OFFER_EXPIRED") == 0);
+}
+
+static void test_exc_session_codes() {
+    ASSERT_TRUE(std::strcmp(exc::SESSION_NOT_FOUND, "SESSION_NOT_FOUND") == 0);
+    ASSERT_TRUE(std::strcmp(exc::SESSION_EXPIRED, "SESSION_EXPIRED") == 0);
+    ASSERT_TRUE(std::strcmp(exc::RESUME_DENIED, "RESUME_DENIED") == 0);
+    ASSERT_TRUE(std::strcmp(exc::MID_OUT_OF_ORDER, "MID_OUT_OF_ORDER") == 0);
+}
+
+static void test_exc_auth_code() {
+    ASSERT_TRUE(std::strcmp(exc::AUTH_FAILED, "AUTH_FAILED") == 0);
+}
+
+static void test_exc_roundtrip_bus() {
+    /* Each bus-scope code round-trips through bus::exception() */
+    const char* codes[] = {
+        exc::BID_OVERFLOW, exc::BID_TIMEOUT, exc::RELAY_FAILED,
+        exc::PATH_BROKEN, exc::INDEX_INVALID, exc::UNKNOWN_BID,
+        exc::MALFORMED_FRAME, exc::UNSUPPORTED_TYPE
+    };
+    for (auto code : codes) {
+        auto f = bus::exception(code);
+        ASSERT_TRUE(f.has_value());
+        ASSERT_EQ(f->data()[0], 0x02);           /* SOM */
+        ASSERT_EQ(f->data()[4], 0x58);           /* X verb */
+        ASSERT_EQ(f->data()[f->size()-1], 0x03); /* EOM */
+    }
+}
+
+static void test_exc_roundtrip_service() {
+    const char* codes[] = { exc::SERVICE_UNKNOWN, exc::OFFER_EXPIRED };
+    for (auto code : codes) {
+        auto f = bus::exception(code);
+        ASSERT_TRUE(f.has_value());
+        ASSERT_EQ(f->data()[4], 0x58);
+    }
+}
+
+static void test_exc_roundtrip_session() {
+    const char* codes[] = {
+        exc::SESSION_NOT_FOUND, exc::SESSION_EXPIRED,
+        exc::RESUME_DENIED, exc::MID_OUT_OF_ORDER
+    };
+    for (auto code : codes) {
+        auto f = bus::exception(code);
+        ASSERT_TRUE(f.has_value());
+        ASSERT_EQ(f->data()[4], 0x58);
+    }
+}
+
+static void test_exc_roundtrip_auth() {
+    auto f = bus::exception(exc::AUTH_FAILED);
+    ASSERT_TRUE(f.has_value());
+    ASSERT_EQ(f->data()[4], 0x58);
+}
+
+static void test_exc_wire_format() {
+    /* Verify wire format of exc::BID_OVERFLOW matches spec §9.9 example */
+    auto f = bus::exception(exc::BID_OVERFLOW);
+    ASSERT_TRUE(f.has_value());
+    const uint8_t expected[] = {0x02,
+        0x12,0x21,0x1A,0x58,0x10,
+        0x12,0x22,0x1A,'B','I','D','_','O','V','E','R','F','L','O','W',0x10,
+        0x03};
+    ASSERT_EQ(f->size(), sizeof(expected));
+    ASSERT_MEM_EQ(f->data(), expected, sizeof(expected));
+}
+
 static void test_bus_empty_bid() {
     ASSERT_TRUE(!bus::establish("").has_value());
     ASSERT_TRUE(!bus::conflict("").has_value());
@@ -279,6 +364,15 @@ void test_bus_run(int& out_run, int& out_passed) {
     TEST(test_bus_relay_auth_challenge_wire);
     TEST(test_bus_relay_auth_response_wire);
     TEST(test_bus_relay_auth_empty_args);
+    TEST(test_exc_bus_codes);
+    TEST(test_exc_service_codes);
+    TEST(test_exc_session_codes);
+    TEST(test_exc_auth_code);
+    TEST(test_exc_roundtrip_bus);
+    TEST(test_exc_roundtrip_service);
+    TEST(test_exc_roundtrip_session);
+    TEST(test_exc_roundtrip_auth);
+    TEST(test_exc_wire_format);
     TEST(test_bus_empty_bid);
     out_run    = tests_run;
     out_passed = tests_passed;

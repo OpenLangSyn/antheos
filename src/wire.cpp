@@ -4,8 +4,8 @@
  * Control characters, word types, radix/unit flags, and wire-format
  * encoding/decoding per Antheos Protocol 1.0 Level 1, v9 specification.
  *
- * Copyright (c) 2025-2026 Are Bjorby <are.bjorby@proton.me>
- * Proprietary — all rights reserved.
+ * Copyright (c) 2025-2026 Are Bjørby <are.bjorby@langsyn.org>
+ * SPDX-License-Identifier: MIT
  */
 
 #include "antheos.hpp"

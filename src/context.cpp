@@ -5,8 +5,8 @@
  * Inbound dispatch via internal parser callbacks.
  * Outbound via bus/service/session verb builders.
  *
- * Copyright (c) 2025-2026 Are Bjorby <are.bjorby@proton.me>
- * Proprietary — all rights reserved.
+ * Copyright (c) 2025-2026 Are Bjørby <are.bjorby@langsyn.org>
+ * SPDX-License-Identifier: MIT
  */
 
 #include "antheos.hpp"

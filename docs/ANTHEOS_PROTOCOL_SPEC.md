@@ -4,7 +4,6 @@
 
 © Are Bjørby
 February 2026
-*LangSyn Project*
 
 ---
 

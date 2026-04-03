@@ -4,8 +4,8 @@
  * Pure C++17 implementation. Transport-agnostic stateful codec
  * for peer-to-peer messaging over any byte stream.
  *
- * Copyright (c) 2025-2026 Are Bjorby <are.bjorby@proton.me>
- * Proprietary — all rights reserved.
+ * Copyright (c) 2025-2026 Are Bjørby <are.bjorby@langsyn.org>
+ * SPDX-License-Identifier: MIT
  */
 
 #pragma once
@@ -157,6 +157,40 @@ std::optional<std::vector<uint8_t>> encode_path(std::string_view path);
 std::optional<std::vector<uint8_t>> encode_message(std::string_view ref);
 
 } // namespace wire
+
+/* ══════════════════════════════════════════════════════════════════
+ *  Standard Exception Codes (v9 spec §13, Appendix A)
+ *
+ *  Reason strings for the Exception verb (!X). Use with
+ *  bus::exception() or Context::exception().
+ * ══════════════════════════════════════════════════════════════════ */
+
+namespace exc {
+
+/* Bus scope */
+inline constexpr const char* BID_OVERFLOW     = "BID_OVERFLOW";
+inline constexpr const char* BID_TIMEOUT      = "BID_TIMEOUT";
+inline constexpr const char* RELAY_FAILED     = "RELAY_FAILED";
+inline constexpr const char* PATH_BROKEN      = "PATH_BROKEN";
+inline constexpr const char* INDEX_INVALID    = "INDEX_INVALID";
+inline constexpr const char* UNKNOWN_BID      = "UNKNOWN_BID";
+inline constexpr const char* MALFORMED_FRAME  = "MALFORMED_FRAME";
+inline constexpr const char* UNSUPPORTED_TYPE = "UNSUPPORTED_TYPE";
+
+/* Service scope */
+inline constexpr const char* SERVICE_UNKNOWN  = "SERVICE_UNKNOWN";
+inline constexpr const char* OFFER_EXPIRED    = "OFFER_EXPIRED";
+
+/* Session scope */
+inline constexpr const char* SESSION_NOT_FOUND = "SESSION_NOT_FOUND";
+inline constexpr const char* SESSION_EXPIRED   = "SESSION_EXPIRED";
+inline constexpr const char* RESUME_DENIED     = "RESUME_DENIED";
+inline constexpr const char* MID_OUT_OF_ORDER  = "MID_OUT_OF_ORDER";
+
+/* Level 2: Authentication (Appendix A) */
+inline constexpr const char* AUTH_FAILED       = "AUTH_FAILED";
+
+} // namespace exc
 
 /* ══════════════════════════════════════════════════════════════════
  *  Identity — Base-32, BID/SID generation

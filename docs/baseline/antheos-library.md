@@ -1,18 +1,18 @@
 # libantheos C++17
 
-Updated: 2026-03-30
+Updated: 2026-04-03
 
 ## What It Is
 
 Pure C++17 implementation of the Antheos Protocol v1.0 (Level 1, v9 spec). Transport-agnostic
 stateful codec for peer-to-peer messaging over any byte stream. Zero dependencies beyond libc.
-No C11 layer underneath.
+No C11 layer underneath. Open-source under MIT license.
 
 ## Location
 
 - Header: `include/antheos.hpp` (single public header)
 - Implementation: `src/` (5 files)
-- Tests: `tests/` (10 suites + test_common.hpp, 287 tests)
+- Tests: `tests/` (10 suites + test_common.hpp, 296 tests)
 - Spec (canon): `docs/ANTHEOS_PROTOCOL_SPEC.md`
 - Compiled: `libantheos.a` (static), `libantheos.so` (shared)
 
@@ -27,6 +27,16 @@ No C11 layer underneath.
 | identity.cpp | ~195 | FNV-1a, base-32, BID/SID generation, SidPool |
 | bus.cpp | ~460 | All 28 frame builders: 14 bus + 2 relay-auth + 3 service + 9 session (19 protocol verbs + convenience variants + Level 2 relay) |
 | context.cpp | ~370 | High-level stateful API: identity, sessions, feed, dispatch (incl. relay dispatch) |
+
+### Exception Codes (spec §13 + Appendix A)
+
+`namespace antheos::exc` — 15 named `inline constexpr const char*` constants:
+
+- **Bus (8):** BID_OVERFLOW, BID_TIMEOUT, RELAY_FAILED, PATH_BROKEN, INDEX_INVALID,
+  UNKNOWN_BID, MALFORMED_FRAME, UNSUPPORTED_TYPE
+- **Service (2):** SERVICE_UNKNOWN, OFFER_EXPIRED
+- **Session (4):** SESSION_NOT_FOUND, SESSION_EXPIRED, RESUME_DENIED, MID_OUT_OF_ORDER
+- **Level 2 (1):** AUTH_FAILED
 
 ### Protocol Verbs (19 total)
 
@@ -83,7 +93,7 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 | test_conformance | 35 | Every wire example from v9 spec verified byte-for-byte |
 | test_edge | 36 | Boundary conditions, C++ API semantics |
 | test_wire | 26 | Encoding/decoding round-trips incl. MESSAGE word |
-| test_bus | 27 | Bus frame builders incl. relay_auth_challenge/response |
+| test_bus | 36 | Bus frame builders incl. relay_auth, exception code constants |
 | test_session | 14 | K/T/N/L/U/F session verbs, MID wrap |
 | test_parser | 12 | Stream parser state machine |
 | test_identity | 15 | Base-32, BID/SID generation, rotation |
@@ -108,7 +118,7 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 | Build output | libantheos.a (static) |
 | Platform deps | None — pure C++17 standard library only |
 | Entropy | Caller-provided (`bid_generate` takes raw bytes) |
-| Tests | 287 across 10 suites |
+| Tests | 296 across 10 suites |
 
 ## Level 2 Extensions
 
@@ -130,4 +140,3 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 - Parser enters ERROR state on unexpected SOM mid-parse (recovers by scanning for next SOM)
 - SID hash collisions theoretically possible at short lengths (FNV-1a on "OID:DID:IID:counter", mitigated by LE byte order and length growth on collision)
 - Empty capability string accepted in Q-verb (no validation)
-- No trace integration yet (deferred)

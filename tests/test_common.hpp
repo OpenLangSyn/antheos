@@ -8,6 +8,9 @@
  *   Compile with -DTEST_MAIN_FN=<suite_fn> to generate main().
  *   The suite function must have signature:
  *     void fn(int& out_run, int& out_passed)
+ *
+ * Copyright (c) 2025-2026 Are Bjørby <are.bjorby@langsyn.org>
+ * SPDX-License-Identifier: MIT
  */
 
 #ifndef TEST_COMMON_HPP

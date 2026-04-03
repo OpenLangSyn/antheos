@@ -9,6 +9,9 @@
  *
  * Build: g++ -std=c++17 -o basic_session basic_session.cpp -lantheos
  * (requires: sudo make install in the libantheos root)
+ *
+ * Copyright (c) 2025-2026 Are Bjørby <are.bjorby@langsyn.org>
+ * SPDX-License-Identifier: MIT
  */
 
 #include <antheos/antheos.hpp>

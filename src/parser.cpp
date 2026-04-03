@@ -4,8 +4,8 @@
  * Byte-at-a-time state machine for v9 wire format:
  *   [SOM] Word₁ Word₂ ... Wordₙ [EOM] Tail
  *
- * Copyright (c) 2025-2026 Are Bjorby <are.bjorby@proton.me>
- * Proprietary — all rights reserved.
+ * Copyright (c) 2025-2026 Are Bjørby <are.bjorby@langsyn.org>
+ * SPDX-License-Identifier: MIT
  */
 
 #include "antheos.hpp"

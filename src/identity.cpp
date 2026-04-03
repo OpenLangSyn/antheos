@@ -4,8 +4,8 @@
  * Base-32 encoding, BID/SID generation, and SID generator
  * per Antheos Protocol 1.0 Level 1, v9 specification (§5.4-5.6, §11.2).
  *
- * Copyright (c) 2025-2026 Are Bjorby <are.bjorby@proton.me>
- * Proprietary — all rights reserved.
+ * Copyright (c) 2025-2026 Are Bjørby <are.bjorby@langsyn.org>
+ * SPDX-License-Identifier: MIT
  */
 
 #include "antheos.hpp"
