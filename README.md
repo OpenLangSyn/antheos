@@ -36,9 +36,8 @@ make clean        # Remove build artifacts
 ```cpp
 #include <antheos/antheos.hpp>
 
-// Generate a BID from platform entropy
-uint8_t entropy[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA};
-auto bid = antheos::id::bid_generate(4, entropy, sizeof(entropy));
+// Generate a BID (reads /dev/urandom internally)
+auto bid = antheos::id::bid_generate(4);
 
 // Create a context (OID, DID, IID, BID)
 antheos::Context ctx("myorg", "sensor", "unit1", *bid);

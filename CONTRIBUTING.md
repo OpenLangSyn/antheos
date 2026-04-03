@@ -49,15 +49,15 @@ make clean        # Remove build artifacts
 
 - **C++17**, compiled with `-Wall -Wextra -Werror -O2 -fPIC`
 - **No external dependencies** — C++17 standard library only
-- **No platform-specific code** — no POSIX headers, no `/dev/*`, no `#ifdef` for OS
+- **POSIX dependency**: `/dev/urandom` for BID/SID entropy generation
 - **Single public header**: `antheos.hpp`
 - Frame builders return `std::optional<Frame>` (nullopt on error)
 - Parser is byte-at-a-time with `std::function` callbacks
-- Context takes OID, DID, IID, BID — caller generates BID via `id::bid_generate()`
-- `bid_generate()` takes caller-provided entropy bytes (platform-agnostic)
+- Context takes OID, DID, IID, BID — `id::bid_generate(len)` generates internally
+- `bid_generate()` and `sid_generate()` have overloads for caller-provided entropy (testing)
 - Reserved bytes (7 total: 0x02 0x03 0x04 0x07 0x10 0x12 0x1A) rejected in word bodies
 - No commented-out code, no bare TODOs, no debug prints
-- Library is transport-agnostic: no sockets, no file I/O, no threads
+- Library is transport-agnostic: no sockets, no threads
 
 ## Adding a New Verb Builder
 

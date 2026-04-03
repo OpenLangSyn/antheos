@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.1 — 2026-04-03
+
+SID entropy — unpredictable session IDs.
+
+- `sid_generate()` accepts optional entropy bytes, mixed into FNV-1a hash
+- `SidPool` reads 8 bytes from `/dev/urandom` on each `acquire()` (POSIX dependency)
+- `bid_generate(len)` overload with internal `/dev/urandom` entropy
+- `O:<BID>\n` body-header convention for session ownership declaration
+- Protocol spec §16 updated: SIDs now entropy-mixed, `O:` header documented
+- 300 tests across 10 suites (+4 entropy tests)
+
 ## v1.0.0 — 2026-04-03
 
 Open-source release under MIT license.

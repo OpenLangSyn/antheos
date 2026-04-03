@@ -211,9 +211,13 @@ constexpr size_t bid_entropy_needed(size_t len) { return (len * 5 + 7) / 8; }
 std::optional<std::string> base32_encode(const uint8_t* data, size_t len);
 std::optional<std::string> bid_generate(size_t len,
     const uint8_t* entropy, size_t entropy_len);
+std::optional<std::string> bid_generate(size_t len);
+constexpr size_t sid_entropy_needed() { return 8; }
+
 std::optional<std::string> sid_generate(
     std::string_view oid, std::string_view did,
-    std::string_view iid, uint32_t counter, size_t len);
+    std::string_view iid, uint32_t counter, size_t len,
+    const uint8_t* entropy = nullptr, size_t entropy_len = 0);
 
 } // namespace id
 

@@ -1021,7 +1021,9 @@ Antheos Level 1 provides no encryption, authentication, or integrity protection.
 
 Applications requiring security implement encryption and authentication as a higher-level service, negotiated through Query/Offer/Accept. The Antheos frame structure (typed words, delimited boundaries) provides clear attachment points for security wrappers around message content.
 
-SIDs are generated fresh per session and never reused, preventing cross-session correlation through SID observation. However, the SID hash derivation (from OID:DID:IID:\<counter\>) is deterministic and not cryptographic — an observer who knows the identity and counter can predict future SIDs. Knowledge of a SID allows interaction with the session.
+SIDs are generated fresh per session and never reused, preventing cross-session correlation through SID observation. SID generation mixes entropy from `/dev/urandom` into the FNV-1a hash alongside the identity and counter, making SIDs unpredictable to external observers. Without entropy, SID generation falls back to deterministic mode (identity + counter only). Knowledge of a SID allows interaction with the session.
+
+Session ownership is declared via an `O:<BID>\n` body-header prefix in the first K-verb of a session. This allows the receiving peer to map SID→BID for session attribution. The `O:` header follows the same convention as the `T:<trace_id>\n` trace header and is extracted after it.
 
 ---
 

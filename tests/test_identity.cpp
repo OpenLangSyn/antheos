@@ -92,6 +92,18 @@ static void test_bid_insufficient_entropy() {
     ASSERT_TRUE(!id::bid_generate(8, nullptr, 0).has_value());
 }
 
+/* ── 6b. BID self-contained — internal entropy, non-deterministic ── */
+
+static void test_bid_self_contained() {
+    auto b1 = id::bid_generate(8);
+    auto b2 = id::bid_generate(8);
+    ASSERT_TRUE(b1.has_value());
+    ASSERT_TRUE(b2.has_value());
+    ASSERT_EQ(b1->size(), 8u);
+    ASSERT_TRUE(is_valid_base32(*b1));
+    ASSERT_TRUE(*b1 != *b2);
+}
+
 /* ── 7. SID generation — valid base-32 SID of expected length ── */
 
 static void test_sid_generate_valid() {
@@ -101,18 +113,54 @@ static void test_sid_generate_valid() {
     ASSERT_TRUE(is_valid_base32(*sid));
 }
 
-/* ── 8. SID determinism — same inputs produce same SID ── */
+/* ── 8. SID determinism — same inputs + same entropy → same SID ── */
 
-static void test_sid_determinism() {
+static void test_sid_determinism_with_entropy() {
+    uint8_t ent[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+    auto sid1 = id::sid_generate("org1", "Thermo", "SN00482", 0, 8, ent, 8);
+    auto sid2 = id::sid_generate("org1", "Thermo", "SN00482", 0, 8, ent, 8);
+    ASSERT_TRUE(sid1.has_value());
+    ASSERT_TRUE(sid2.has_value());
+    ASSERT_TRUE(*sid1 == *sid2);
+
+    /* Different counter still differs */
+    auto sid3 = id::sid_generate("org1", "Thermo", "SN00482", 1, 8, ent, 8);
+    ASSERT_TRUE(sid3.has_value());
+    ASSERT_TRUE(*sid1 != *sid3);
+}
+
+/* ── 8b. SID entropy — different entropy → different SID ── */
+
+static void test_sid_entropy_changes_output() {
+    uint8_t ent_a[8] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA, 0xFE, 0xBA, 0xBE};
+    uint8_t ent_b[8] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
+    auto sid_a = id::sid_generate("org1", "Thermo", "SN00482", 0, 8, ent_a, 8);
+    auto sid_b = id::sid_generate("org1", "Thermo", "SN00482", 0, 8, ent_b, 8);
+    ASSERT_TRUE(sid_a.has_value());
+    ASSERT_TRUE(sid_b.has_value());
+    ASSERT_TRUE(*sid_a != *sid_b);
+}
+
+/* ── 8c. SID without entropy — backward compatible (no entropy = deterministic) ── */
+
+static void test_sid_no_entropy_deterministic() {
     auto sid1 = id::sid_generate("org1", "Thermo", "SN00482", 0, 8);
     auto sid2 = id::sid_generate("org1", "Thermo", "SN00482", 0, 8);
     ASSERT_TRUE(sid1.has_value());
     ASSERT_TRUE(sid2.has_value());
     ASSERT_TRUE(*sid1 == *sid2);
+}
 
-    auto sid3 = id::sid_generate("org1", "Thermo", "SN00482", 1, 8);
-    ASSERT_TRUE(sid3.has_value());
-    ASSERT_TRUE(*sid1 != *sid3);
+/* ── 8d. SidPool non-determinism — same identity, different SIDs each run ── */
+
+static void test_sid_pool_non_deterministic() {
+    SidPool pool_a("org1", "Thermo", "SN00482");
+    SidPool pool_b("org1", "Thermo", "SN00482");
+    auto sid_a = pool_a.acquire();
+    auto sid_b = pool_b.acquire();
+    ASSERT_TRUE(sid_a.has_value());
+    ASSERT_TRUE(sid_b.has_value());
+    ASSERT_TRUE(*sid_a != *sid_b);
 }
 
 /* ── 9. SID pool init ── */
@@ -237,8 +285,12 @@ void test_identity_run(int& out_run, int& out_passed) {
     TEST(test_bid_determinism);
     TEST(test_bid_entropy_needed);
     TEST(test_bid_insufficient_entropy);
+    TEST(test_bid_self_contained);
     TEST(test_sid_generate_valid);
-    TEST(test_sid_determinism);
+    TEST(test_sid_determinism_with_entropy);
+    TEST(test_sid_entropy_changes_output);
+    TEST(test_sid_no_entropy_deterministic);
+    TEST(test_sid_pool_non_deterministic);
     TEST(test_sid_pool_init_basic);
     TEST(test_sid_pool_acquire);
     TEST(test_sid_pool_acquire_multiple);

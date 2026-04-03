@@ -26,10 +26,8 @@ static void print_hex(const char* label, const antheos::Frame& frame) {
 
 int main() {
     /* Step 1: Create context with identity (OID, DID, IID, BID)
-     * BID is caller-provided — generate from your platform's entropy source,
-     * or use antheos::id::bid_generate() with raw entropy bytes. */
-    uint8_t entropy[] = {0xDE, 0xAD, 0xBE, 0xEF, 0xCA};
-    auto bid = antheos::id::bid_generate(8, entropy, sizeof(entropy));
+     * bid_generate() reads /dev/urandom internally. */
+    auto bid = antheos::id::bid_generate(8);
     if (!bid) { std::fprintf(stderr, "BID generation failed\n"); return 1; }
     antheos::Context ctx("example", "demo", "main", *bid);
     std::printf("Initialized: BID=%.*s\n",

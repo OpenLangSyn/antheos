@@ -116,9 +116,9 @@ make install      # Install to /usr/local/lib + /usr/local/include/antheos/
 | Memory | RAII (pimpl, vector, string) |
 | Buffer model | Frame value type (heap-backed) |
 | Build output | libantheos.a (static) |
-| Platform deps | None — pure C++17 standard library only |
-| Entropy | Caller-provided (`bid_generate` takes raw bytes) |
-| Tests | 296 across 10 suites |
+| Platform deps | POSIX (`/dev/urandom` for BID/SID entropy) |
+| Entropy | Internal via `/dev/urandom`; caller-provided overloads available |
+| Tests | 300 across 10 suites |
 
 ## Level 2 Extensions
 

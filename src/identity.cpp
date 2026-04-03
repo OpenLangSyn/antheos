@@ -12,6 +12,8 @@
 #include <cstdio>
 #include <cstring>
 #include <stdexcept>
+#include <fcntl.h>
+#include <unistd.h>
 
 namespace antheos {
 
@@ -29,6 +31,14 @@ uint64_t fnv1a_64(const uint8_t* data, size_t len) {
         hash *= FNV1A_PRIME;
     }
     return hash;
+}
+
+bool read_urandom(uint8_t* buf, size_t len) {
+    int fd = ::open("/dev/urandom", O_RDONLY);
+    if (fd < 0) return false;
+    ssize_t n = ::read(fd, buf, len);
+    ::close(fd);
+    return n == static_cast<ssize_t>(len);
 }
 
 } // anonymous namespace
@@ -79,16 +89,29 @@ std::optional<std::string> bid_generate(size_t len,
     return encoded->substr(0, len);
 }
 
+std::optional<std::string> bid_generate(size_t len) {
+    if (len < BID_MIN_LEN || len > BID_MAX_LEN)
+        return std::nullopt;
+
+    size_t nbytes = bid_entropy_needed(len);
+    uint8_t entropy[16]; /* BID_MAX_LEN=16 → max 10 bytes needed */
+    if (!read_urandom(entropy, nbytes))
+        return std::nullopt;
+
+    return bid_generate(len, entropy, nbytes);
+}
+
 std::optional<std::string> sid_generate(
     std::string_view oid, std::string_view did,
-    std::string_view iid, uint32_t counter, size_t len) {
+    std::string_view iid, uint32_t counter, size_t len,
+    const uint8_t* entropy, size_t entropy_len) {
 
     if (oid.empty() || did.empty() || iid.empty())
         return std::nullopt;
     if (len < SID_MIN_LEN || len > SID_MAX_LEN)
         return std::nullopt;
 
-    /* Build hash input: "oid:did:iid:<counter>" */
+    /* Build hash input: "oid:did:iid:<counter>" + raw entropy bytes */
     char input[256];
     int n = std::snprintf(input, sizeof(input), "%.*s:%.*s:%.*s:%u",
                           static_cast<int>(oid.size()), oid.data(),
@@ -98,9 +121,17 @@ std::optional<std::string> sid_generate(
     if (n < 0 || static_cast<size_t>(n) >= sizeof(input))
         return std::nullopt;
 
+    /* Append entropy bytes directly to hash input */
+    size_t input_len = static_cast<size_t>(n);
+    if (entropy != nullptr && entropy_len > 0) {
+        size_t avail = sizeof(input) - input_len;
+        size_t copy = entropy_len < avail ? entropy_len : avail;
+        std::memcpy(input + input_len, entropy, copy);
+        input_len += copy;
+    }
+
     /* Primary FNV-1a hash → 8 bytes (little-endian for truncation quality) */
-    uint64_t h1 = fnv1a_64(reinterpret_cast<const uint8_t*>(input),
-                            static_cast<size_t>(n));
+    uint64_t h1 = fnv1a_64(reinterpret_cast<const uint8_t*>(input), input_len);
     uint8_t hash_bytes[16];
     for (int i = 0; i < 8; i++) {
         hash_bytes[i] = static_cast<uint8_t>(h1 & 0xFFu);
@@ -151,8 +182,12 @@ SidPool& SidPool::operator=(SidPool&&) noexcept = default;
 
 std::optional<std::string> SidPool::acquire() {
     auto& p = *impl_;
+    uint8_t entropy[id::sid_entropy_needed()];
+    if (!read_urandom(entropy, sizeof(entropy)))
+        return std::nullopt;
     auto sid = id::sid_generate(p.oid, p.did, p.iid,
-                                p.next_counter, p.current_len);
+                                p.next_counter, p.current_len,
+                                entropy, sizeof(entropy));
     if (!sid) return std::nullopt;
     p.next_counter++;
     return sid;
@@ -165,8 +200,12 @@ std::optional<std::string> SidPool::acquire_unique(CollisionCheck check) {
     /* Generate fresh per §11.2 — up to 3 full cycles */
     size_t full_cycles = 0;
     while (full_cycles < 3) {
+        uint8_t entropy[id::sid_entropy_needed()];
+        if (!read_urandom(entropy, sizeof(entropy)))
+            return std::nullopt;
         auto sid = id::sid_generate(p.oid, p.did, p.iid,
-                                    p.next_counter, p.current_len);
+                                    p.next_counter, p.current_len,
+                                    entropy, sizeof(entropy));
         if (!sid) return std::nullopt;
 
         if (!check(*sid)) {
