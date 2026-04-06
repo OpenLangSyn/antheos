@@ -1,0 +1,5 @@
+build/
+libantheos.a
+*.o
+docs/prompts/
+docs/reports/
