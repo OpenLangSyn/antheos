@@ -4,6 +4,8 @@ C++17 reference implementation of the [Antheos Protocol](docs/ANTHEOS_PROTOCOL_S
 
 Transport-agnostic frame codec: bytes in, bytes out. Zero dependencies beyond the C++17 standard library. No POSIX, no platform-specific code. Runs on anything from 8-bit MCUs to server clusters.
 
+**Author:** Are Bjørby <are.bjorby@langsyn.org>
+
 ## Features
 
 - **19 Level 1 verbs** across 3 scopes (bus, service, session)
